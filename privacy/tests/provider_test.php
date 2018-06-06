@@ -175,8 +175,7 @@ class provider_testcase extends advanced_testcase {
      */
     public function test_all_providers_compliant($component, $classname) {
         $manager = new manager();
-        // Catalyst customisation: do not check for privacy compliance in this version of Moodle.
-        $this->assertTrue(true);
+        $this->assertTrue($manager->component_is_compliant($component));
     }
 
     /**
