@@ -5,7 +5,7 @@
 	url = git@github.com:catalyst/moodle-tool_heartbeat.git
 [submodule "auth/catalyst"]
 	autoupdate = merge
-	branch = STABLE_33
+	branch = master
 	path = auth/catalyst
 	url = git@git.catalyst-au.net:elearning/mdl-auth_catalyst.git
 [submodule "lib/editor/atto/plugins/preview"]
