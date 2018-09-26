@@ -19,11 +19,68 @@
  *
  * @package    core
  * @category   dml
- * @copyright  2018 Catalyst IT
+ * @copyright  2018 Srdjan Janković, Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
+
+/**
+ * Trait to wrap connect() method of database driver classes that gives
+ * ability to use read only slave instances for SELECT queries. For the
+ * databases that support replication and read only connections to the slave.
+ * If the slave connection is configured there will be two database handles
+ * created, one for the master and another one for the slave. If there's no
+ * slave specified everything uses master handle.
+ *
+ * Classes that use this trait need to rename existing connect() method to
+ * raw_connect(). In addition, they need to provide get_db_handle() and
+ * set_db_handle() methods, due to dbhandle attributes not being named
+ * consistently across the database driver classes.
+ *
+ * Read only slave connection is configured in $CFG->dboptions['readonly']
+ * array.
+ * - It supports multiple 'instance' entries, in case one is not accessible,
+ *   but only one (first connectable) instance is used.
+ * - 'latency' option: master -> slave sync latency in seconds (will probably
+ *   be a fraction of a second). If specified, a table being written to is
+ *   deemed fully synced and suitable for slave read.
+ * - 'exclude_tables' option: a list of tables that never go to the slave for
+ *   querying. The feature is meant to be used in emergency only, so the
+ *   readonly feature can still be used in case there is a rogue query that
+ *   does not go through the standard dml interface or some other unaccounted
+ *   situation. It should not be used under normal circumstances, and its use
+ *   indicates a problem in the system that needs addressig.
+ *
+ * Choice of the database handle is based on following:
+ * - SQL_QUERY_INSERT, UPDATE and STRUCTURE record table from the query
+ *   in the $written array and microtime() the event if the 'latency' option
+ *   is set. For those queries master write handle is used.
+ * - SQL_QUERY_AUX queries will always use the master write handle because they
+ *   are used for transactionstart/end, locking etc. In that respect, query_start() and
+ *   query_end() *must not* be used during the connection phase.
+ * - SELECT queries will use the master write handle if:
+ *   -- any of the tables involved is a temp table
+ *   -- any of the tables involved is listed in the 'exclude_tables' option
+ *   -- any of the tables involved is in the $written array:
+ *      * If the 'latency' option is set then the microtime() is compared to
+ *        the write microrime, and if more then latency time has passed the slave
+ *        handle is used.
+ *      * Otherwise (not enough time passed or 'latency' option not set)
+ *        we choose the master write handle
+ *   If none of the above conditions are met the slave instance is used.
+ *
+ * A 'latency' example:
+ *  - we have set $CFG->dboptions['readonly']['latency'] to 0.2.
+ *  - a SQL_QUERY_UPDATE to table tbl_x happens, and it is recorded in
+ *    the $written array
+ *  - 0.15 seconds later SQL_QUERY_SELECT with tbl_x is requested - the master
+ *    connection is used
+ *  - 0.10 seconds later (0.25 seconds after SQL_QUERY_UPDATE) another
+ *    SQL_QUERY_SELECT with tbl_x is requested - this time more than 0.2 secs
+ *    has gone and master -> slave sync is assumed, so the slave connection is
+ *    used again
+ */
 
 trait moodle_read_slave_trait {
 
@@ -33,27 +90,50 @@ trait moodle_read_slave_trait {
     /** @var resource slave read only database handle */
     protected $dbhreadonly;
 
+    private $wantreadslave = false;
     private $readsslave = 0;
     private $slavelatency = 0;
 
-    private $written = array();
-    private $readexclude = array();
+    private $written = []; // Track tables being written to.
+    private $readexclude = []; // Tables to exclude from using dbhreadonly.
+
+    private $pdbhost;
+    private $pdbuser;
+    private $pdbpass;
+    private $pdbname;
+    private $pprefix;
+    private $pdboptions;
 
     /**
      * Gets db handle currently used with queries
      * @return resource
      */
-    abstract protected function db_handle();
+    abstract protected function get_db_handle();
 
     /**
      * Sets db handle to be used with subsequent queries
      * @param resource $dbh
      * @return void
      */
-    abstract protected function set_db_handle($dbh);
+    abstract protected function set_db_handle($dbh): void;
 
     /**
      * Connect to db
+     * The real connection establisment, called from connect() and set_dbhwrite()
+     * @param string $dbhost The database host.
+     * @param string $dbuser The database username.
+     * @param string $dbpass The database username's password.
+     * @param string $dbname The name of the database being connected to.
+     * @param mixed $prefix string means moodle db prefix, false used for external databases where prefix not used
+     * @param array $dboptions driver specific options
+     * @return bool true
+     * @throws dml_connection_exception if error
+     */
+    abstract protected function raw_connect(string $dbhost, string $dbuser, string $dbpass, string $dbname, $prefix, array $dboptions=null): bool;
+
+    /**
+     * Connect to db
+     * The connection parameters processor that sets up stage for master write and slave readonly handles.
      * Must be called before other methods.
      * @param string $dbhost The database host.
      * @param string $dbuser The database username.
@@ -64,156 +144,236 @@ trait moodle_read_slave_trait {
      * @return bool true
      * @throws dml_connection_exception if error
      */
-    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions = null) {
+    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
+        $this->pdbhost = $dbhost;
+        $this->pdbuser = $dbuser;
+        $this->pdbpass = $dbpass;
+        $this->pdbname = $dbname;
+        $this->pprefix = $prefix;
+        $this->pdboptions = $dboptions;
+
         if ($dboptions) {
-            if (isset($dboptions['dbhost_readonly'])) {
-                $ro = $dboptions['dbhost_readonly'];
-                if (is_array($ro)) {
-                    /* A random-ish read-only server */
-                    switch ($cnt = count($ro)) {
-                        case 0:
-                            unset($ro);
-                            break;
-                        case 1:
-                            $ro1 = $ro = $ro[0];
-                            break;
-                        default:
-                            $idx = rand(0, $cnt - 1);
-                            $ro1 = $ro[$idx];
+            if (isset($dboptions['readonly'])) {
+                $this->wantreadslave = true;
+                $dboptionsro = $dboptions['readonly'];
+
+                if (isset($dboptionsro['connecttimeout'])) {
+                    $dboptions['connecttimeout'] = $dboptionsro['connecttimeout'];
+                } else if (!isset($dboptions['connecttimeout'])) {
+                    $dboptions['connecttimeout'] = 2; // Default readonly connection timeout.
+                }
+                if (isset($dboptionsro['latency'])) {
+                    $this->slavelatency = $dboptionsro['latency'];
+                }
+                if (isset($dboptionsro['exclude_tables'])) {
+                    $this->readexclude = $dboptionsro['exclude_tables'];
+                    if (!is_array($this->readexclude)) {
+                        throw new configuration_exception('exclude_tables must be an array');
                     }
                 }
-            }
-            if (isset($ro1)) {
-                try {
-                    parent::connect($ro1, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
-                    $this->dbhreadonly = $this->db_handle();
-                    if (isset($dboptions['db_readonly_latency'])) {
-                        $this->slavelatency = $dboptions['db_readonly_latency'];
-                    }
-                    if (isset($dboptions['db_readonly_exclude_tables'])) {
-                        $this->readexclude = $dboptions['db_readonly_exclude_tables'];
-                        if (!is_array($this->readexclude)) {
-                            throw new configuration_exception('db_readonly_exclude_tables must be an array');
-                        }
-                    }
-                } catch (dml_connection_exception $e) {
-                    error_log("$e");
+                $dbport = isset($dboptions['dbport']) ? $dboptions['dbport'] : null;
 
-                    if (is_array($ro)) {
-                        foreach ($ro as $ro2) {
-                            if ($ro2 == $ro1) {
-                                continue;
-                            }
-                            try {
-                                parent::connect($ro2, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
-                                $this->dbhreadonly = $this->db_handle();
-                                break;
-                            } catch (dml_connection_exception $e) {
-                            }
-                        }
+                $ro = $dboptionsro['instance'];
+                if (!is_array($ro) || !isset($ro[0])) {
+                    $ro = [$ro];
+                }
+                // Find first connectable readonly slave.
+                foreach ($ro as $ro1) {
+                    if (!is_array($ro1)) {
+                        $ro1 = ['dbhost' => $ro1];
                     }
+                    foreach (['dbhost', 'dbuser', 'dbpass'] as $v) {
+                        $vro = "${v}ro";
+                        $$vro = isset($ro1[$v]) ? $ro1[$v] : $$v;
+                    }
+                    $dboptions['dbport'] = isset($ro1['dbport']) ? $ro1['dbport'] : $dbport;
+
+                    // @codingStandardsIgnoreStart
+                    try {
+                        $this->raw_connect($dbhostro, $dbuserro, $dbpassro, $dbname, $prefix, $dboptions);
+                        $this->dbhreadonly = $this->get_db_handle();
+                        break;
+                    } catch (dml_connection_exception $e) {
+                        // If readonly slave is not connectable we'll have to do without it.
+                    }
+                    // @codingStandardsIgnoreEnd
                 }
             }
         }
+        if (!$this->dbhreadonly) {
+            $this->set_dbhwrite();
+        }
 
-        parent::connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
-        $this->dbhwrite = $this->db_handle();
+        return true;
+    }
+
+    /**
+     * Set database handle to readwrite master
+     * Will connect if required. Calls set_db_handle()
+     * @return void
+     */
+    private function set_dbhwrite(): void {
+        // Late connect to read/write master if needed.
+        if (!$this->dbhwrite) {
+            $this->raw_connect($this->pdbhost, $this->pdbuser, $this->pdbpass, $this->pdbname, $this->pprefix, $this->pdboptions);
+            $this->dbhwrite = $this->get_db_handle();
+        }
+        $this->set_db_handle($this->dbhwrite);
+    }
+
+    /**
+     * Returns whether we want to connect to slave database for read queries.
+     * @return bool Want read only connection
+     */
+    public function want_read_slave(): bool {
+        return $this->wantreadslave;
     }
 
     /**
      * Returns the number of reads done by the read only database.
      * @return int Number of reads.
      */
-    public function perf_get_reads_slave() {
+    public function perf_get_reads_slave(): int {
         return $this->readsslave;
+    }
+
+    /**
+     * On DBs that support it, switch to transaction mode and begin a transaction
+     * @return moodle_transaction
+     */
+    public function start_delegated_transaction() {
+        $this->set_dbhwrite();
+        return parent::start_delegated_transaction();
     }
 
     /**
      * Called before each db query.
      * @param string $sql
-     * @param array $params
+     * @param array $params array of parameters
      * @param int $type type of query
      * @param mixed $extrainfo driver specific extra information
      * @return void
      */
     protected function query_start($sql, array $params=null, $type, $extrainfo=null) {
-        $this->_query_start($sql, $params, $type, $extrainfo);
+        parent::query_start($sql, $params, $type, $extrainfo);
+        $this->select_db_handle($type, $sql);
     }
 
-    protected function _query_start($sql, array $params=null, $type, $extrainfo=null) {
-        parent::query_start($sql, $params, $type, $extrainfo);
-
-        if (!$this->dbhreadonly) {
-            return;
+    /**
+     * Select appropriate db handle - readwrite or readonly
+     * @param int $type type of query
+     * @param string $sql
+     * @return void
+     */
+    protected function select_db_handle(int $type, string $sql): void {
+        if ($this->dbhreadonly && $this->query_is_readonly($type, $sql)) {
+                $this->readsslave++;
+                $this->set_db_handle($this->dbhreadonly);
+                return;
         }
+        $this->set_dbhwrite();
+    }
 
+    /**
+     * Check if The query qualifies for readonly connection execution
+     * @param int $type type of query
+     * @param string $sql
+     * @return bool
+     */
+    private function query_is_readonly(int $type, string $sql): bool {
         if ($this->loggingquery) {
-            return;
+            return false;
         }
 
-        // lock_db queries always go to master
+        // ... lock_db queries always go to master.
         if (preg_match('/lock_db\b/', $sql)) {
-            return;
+            return false;
         }
 
-        # Transactions are done as AUX, we cannot play with that
+        // Transactions are done as AUX, we cannot play with that.
         switch ($type) {
             case SQL_QUERY_SELECT:
+                if ($this->transactions) {
+                    return false;
+                }
+
                 $now = null;
                 foreach ($this->table_names($sql) as $t) {
                     if (in_array($t, $this->readexclude)) {
-                        break 2;
+                        return false;
                     }
 
-                    if ($this->temptables->is_temptable($t)) {
-                        break 2;
+                    if ($this->temptables && $this->temptables->is_temptable($t)) {
+                        return false;
                     }
 
                     if (isset($this->written[$t])) {
                         if ($this->slavelatency) {
                             $now = $now ?: microtime(true);
                             if ($now - $this->written[$t] < $this->slavelatency) {
-                                break 2;
+                                return false;
                             }
-                        }
-                        else {
-                            break 2;
+                            unset($this->written[$t]);
+                        } else {
+                            return false;
                         }
                     }
                 }
 
-                $this->readsslave++;
-                $this->set_db_handle($this->dbhreadonly);
-                break;
+                return true;
             case SQL_QUERY_INSERT:
             case SQL_QUERY_UPDATE:
-            case SQL_QUERY_STRUCTURE:
-                $now = $this->slavelatency ? microtime(true) : true;
+                // If we are in transaction we cannot set the written time yet.
+                $now = $this->slavelatency && !$this->transactions ? microtime(true) : true;
                 foreach ($this->table_names($sql) as $t) {
                     $this->written[$t] = $now;
                 }
-                break;
+                return false;
+            case SQL_QUERY_STRUCTURE:
+                foreach ($this->table_names($sql) as $t) {
+                    if (!in_array($t, $this->readexclude)) {
+                        $this->readexclude[] = $t;
+                    }
+                }
+                return false;
         }
-    }
-
-    protected function table_names($sql) {
-        preg_match_all('/\b'.$this->prefix.'([a-z][A-Za-z0-9_]*)/', $sql, $match);
-        return $match[1];
+        return false;
     }
 
     /**
-     * Called immediately after each db query.
-     * @param mixed $result db specific
+     * Indicates delegated transaction finished successfully.
+     * Set written times after outermost transaction finished
+     * @param moodle_transaction $transaction The transaction to commit
      * @return void
+     * @throws dml_transaction_exception Creates and throws transaction related exceptions.
      */
-    protected function query_end($result) {
-        $this->_query_end($result);
+    public function commit_delegated_transaction(moodle_transaction $transaction) {
+        parent::commit_delegated_transaction($transaction);
+
+        if ($this->transactions) {
+            return;
+        }
+
+        if (!$this->slavelatency) {
+            return;
+        }
+
+        $now = null;
+        foreach ($this->written as $t => $when) {
+            if (true === $when) {
+                $now = $now ?: microtime(true);
+                $this->written[$t] = $now;
+            }
+        }
     }
 
-    protected function _query_end($result) {
-        if ($this->dbhwrite) { // Sometimes handlers do queries from connect()
-            $this->set_db_handle($this->dbhwrite);
-        }
-        parent::query_end($result);
+    /**
+     * Parse table names from query
+     * @param string $sql
+     * @return array
+     */
+    protected function table_names(string $sql): array {
+        preg_match_all('/\b'.$this->prefix.'([a-z][A-Za-z0-9_]*)/', $sql, $match);
+        return $match[1];
     }
 }
