@@ -26,7 +26,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__.'/mariadb_native_moodle_database.php');
-require_once(__DIR__.'/moodle_read_slave_trait.php');
 
 /**
  * Native mariadb class derrivative with read-only slave database connection support
@@ -37,31 +36,4 @@ require_once(__DIR__.'/moodle_read_slave_trait.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class mariadb_read_slave_native_moodle_database extends mariadb_native_moodle_database {
-    use moodle_read_slave_trait;
-
-    /**
-     * Returns more specific database driver type
-     * Note: can be used before connect()
-     * @return string db type
-     */
-    protected function get_dbtype() {
-        return 'mariadb_read_slave';
-    }
-
-    /**
-     * Gets db handle currently used with queries
-     * @return resource
-     */
-    protected function db_handle() {
-        return $this->mysqli;
-    }
-
-    /**
-     * Sets db handle to be used with subsequent queries
-     * @param resource $dbh
-     * @return void
-     */
-    protected function set_db_handle($dbh) {
-        $this->mysqli = $dbh;
-    }
 }

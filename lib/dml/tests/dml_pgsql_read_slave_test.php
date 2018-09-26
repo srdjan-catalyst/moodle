@@ -19,13 +19,13 @@
  *
  * @package    core
  * @category   dml
- * @copyright  2018 Catalyst IT
+ * @copyright  2018 Srdjan Janković, Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__.'/../pgsql_read_slave_native_moodle_database.php');
+require_once(__DIR__.'/../pgsql_native_moodle_database.php');
 require_once(__DIR__.'/../moodle_temptables.php');
 
 /**
@@ -36,9 +36,17 @@ require_once(__DIR__.'/../moodle_temptables.php');
  * @copyright  2018 Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class read_slave_moodle_database_mock extends pgsql_read_slave_native_moodle_database {
+class read_slave_moodle_database_mock extends pgsql_native_moodle_database {
+    /**
+     * @var string
+     */
     protected $prefix = 't_';
 
+    /**
+     * Constructs a mock db driver
+     *
+     * @param bool $external
+     */
     public function __construct($external=false) {
         parent::__construct($external);
 
@@ -49,24 +57,40 @@ class read_slave_moodle_database_mock extends pgsql_read_slave_native_moodle_dat
         $this->temptables = new moodle_temptables($this);
     }
 
+    /**
+     * Upgrade to public
+     * {@inheritdoc}
+     */
     public function db_handle() {
         return parent::db_handle();
     }
 
+    /**
+     * Upgrade to public
+     * {@inheritdoc}
+     */
     public function query_start($sql, array $params=null, $type, $extrainfo=null) {
         return parent::query_start($sql, $params, $type);
     }
 
+    /**
+     * Upgrade to public
+     * {@inheritdoc}
+     */
     public function query_end($result) {
         $this->set_db_handle($this->dbhwrite);
     }
 
+    /**
+     * Upgrade to public
+     * {@inheritdoc}
+     */
     public function dispose() {
     }
 }
 
 /**
- * DML pgsql_read_slave_native_moodle_database specific tests
+ * DML pgsql_native_moodle_database read slave specific tests
  *
  * @package    core
  * @category   dml
