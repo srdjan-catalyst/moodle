@@ -24,6 +24,12 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['clustermode'] = 'Cluster Mode';
+$string['clustermodeunavailable'] = '<i>Redis Cluster unavailable. Do you have redis 3.0.0+ installed?</i>';
+$string['compressor_none'] = 'No compression.';
+$string['compressor_php_gzip'] = 'Use gzip compression.';
+$string['formerror_clusterserver'] = 'Invalid server [{$a->server}]. Correct format is: <i>address:port</i>';
+$string['formerror_singleserveronly'] = 'Only one server allowed if not cluster mode. Check for extra newlines.';
 $string['pluginname'] = 'Redis';
 $string['prefix'] = 'Key prefix';
 $string['prefix_help'] = 'This prefix is used for all key names on the Redis server.
@@ -38,6 +44,10 @@ $string['server'] = 'Server';
 $string['server_help'] = 'This sets the hostname or IP address of the Redis server to use.';
 $string['password'] = 'Password';
 $string['password_help'] = 'This sets the password of the Redis server.';
+$string['server'] = 'Server(s)';
+$string['server_help'] = '<b>Format:</b> <i>host:port</i><br />This sets the hostname or IP address of the Redis server to use.<br />For clustered mode provide one server per line.';
+$string['password'] = 'Password';
+$string['password_help'] = 'This sets the password of the Redis server.';
 $string['test_server'] = 'Test server';
 $string['test_server_desc'] = 'Redis server to use for testing.';
 $string['test_password'] = 'Test server password';
@@ -48,3 +58,5 @@ $string['useserializer'] = 'Use serializer';
 $string['useserializer_help'] = 'Specifies the serializer to use for serializing.
 The valid serializers are Redis::SERIALIZER_PHP or Redis::SERIALIZER_IGBINARY.
 The latter is supported only when phpredis is configured with --enable-redis-igbinary option and the igbinary extension is loaded.';
+$string['usecompressor'] = 'Use compressor';
+$string['usecompressor_help'] = 'Specifies the compressor to use after serializing. It is done at Moodle Cache API level, not at php-redis level.';
