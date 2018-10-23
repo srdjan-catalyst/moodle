@@ -48,3 +48,7 @@
 	branch = master
   path = search/engine/elastic
 	url = git@github.com:catalyst/moodle-search_elastic.git
+[submodule "auth/outage"]
+	branch = master
+  path = auth/outage
+	url = git@github.com:catalyst/moodle-auth_outage.git
