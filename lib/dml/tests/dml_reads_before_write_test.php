@@ -113,24 +113,17 @@ class core_dml_reads_before_write_testcase extends base_testcase {
         parent::tearDownAfterClass();
     }
 
-    public function setUp() {
-        parent::SetUp();
-        $this->tdb = self::db_conn();
-    }
-
-    public function tearDown() {
-        $this->tdb->dispose();
-        $this->tdb = null;
-        parent::tearDown();
-    }
-
     public function test_reads() {
         $DB = self::db_conn();
 
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
+        if ($DB->perf_get_writes() > 0) {
+            $this->markTestSkipped('Database connect() makes write queries, cannot test');
+        }
+        $initreadsbeforewrite = $DB->perf_get_reads_before_write();
+
         $DB->get_records(self::$tablename);
         $readsbeforewrite = $DB->perf_get_reads_before_write();
-        $this->assertGreaterThan(0, $readsbeforewrite);
+        $this->assertGreaterThan($initreadsbeforewrite, $readsbeforewrite);
 
         $DB->insert_record_raw(self::$tablename, array('name' => 'blah'));
         $DB->get_records(self::$tablename);
