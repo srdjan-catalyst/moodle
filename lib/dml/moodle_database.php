@@ -87,8 +87,12 @@ abstract class moodle_database {
     /** @var bool True means non-moodle external database used.*/
     protected $external;
 
+    /** @var int The database read-only session flag.*/
+    protected $isreadonly = true;
     /** @var int The database reads (performance counter).*/
     protected $reads = 0;
+    /** @var int The database reads before first write (performance counter).*/
+    protected $readsbeforewrite = 0;
     /** @var int The database writes (performance counter).*/
     protected $writes = 0;
     /** @var float Time queries took to finish, seconds with microseconds.*/
@@ -422,6 +426,7 @@ abstract class moodle_database {
      */
     protected function query_start($sql, array $params=null, $type, $extrainfo=null) {
         if ($this->loggingquery) {
+            $this->isreadonly = false;
             return;
         }
         $this->last_sql       = $sql;
@@ -433,11 +438,15 @@ abstract class moodle_database {
         switch ($type) {
             case SQL_QUERY_SELECT:
             case SQL_QUERY_AUX:
+                if ($this->isreadonly) {
+                    $this->readsbeforewrite++;
+                }
                 $this->reads++;
                 break;
             case SQL_QUERY_INSERT:
             case SQL_QUERY_UPDATE:
             case SQL_QUERY_STRUCTURE:
+                $this->isreadonly = false;
                 $this->writes++;
             default:
                 if ((PHPUNIT_TEST) || (defined('BEHAT_TEST') && BEHAT_TEST) ||
@@ -2486,6 +2495,7 @@ abstract class moodle_database {
      * @return moodle_transaction
      */
     public function start_delegated_transaction() {
+        $this->isreadonly = false;
         $transaction = new moodle_transaction($this);
         $this->transactions[] = $transaction;
         if (count($this->transactions) == 1) {
@@ -2662,6 +2672,14 @@ abstract class moodle_database {
      */
     public function perf_get_reads() {
         return $this->reads;
+    }
+
+    /**
+     * Returns the number of reads before first write done by this database.
+     * @return int Number of reads.
+     */
+    public function perf_get_reads_before_write() {
+        return $this->readsbeforewrite;
     }
 
     /**

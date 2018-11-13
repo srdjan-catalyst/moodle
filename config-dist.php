@@ -79,6 +79,9 @@ $CFG->dboptions = array(
                                 // set to zero if you are using pg_bouncer in
                                 // 'transaction' mode (it is fine in 'session'
                                 // mode).
+    // 'dbhost_readonly' => ['slave1.db', 'slave2.db'], // Set to read-only slave hosts, to get
+                                // safe reads from there instead of master node.
+                                // Needs a db driver that supports the feature.
 );
 
 

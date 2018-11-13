@@ -9236,6 +9236,10 @@ function get_performance_info() {
     $info['html'] .= '<li class="dbqueries col-sm-4">DB reads/writes: '.$info['dbqueries'].'</li> ';
     $info['txt'] .= 'db reads/writes: '.$info['dbqueries'].' ';
 
+    $info['dbreads_before_write'] = $DB->perf_get_reads_before_write();
+    $info['html'] .= '<li class="dbqueries col-sm-4">DB reads before first write: '.$info['dbreads_before_write'].'</li> ';
+    $info['txt'] .= 'db reads before first write: '.$info['dbreads_before_write'].' ';
+
     $info['dbtime'] = round($DB->perf_get_queries_time(), 5);
     $info['html'] .= '<li class="dbtime col-sm-4">DB queries time: '.$info['dbtime'].' secs</li> ';
     $info['txt'] .= 'db queries time: ' . $info['dbtime'] . 's ';
