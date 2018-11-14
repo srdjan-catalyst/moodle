@@ -61,20 +61,39 @@ trait moodle_read_slave_trait {
                 $ro = $dboptions['dbhost_readonly'];
                 if (is_array($ro)) {
                     /* A random-ish read-only server */
-                    if ($cnt = count($ro)) {
-                        $idx = ($cnt == 1) ? 0 : rand(0, $cnt - 1);
-                        $ro = $ro[$idx];
-                    } else {
-                        unset($ro);
+                    switch ($cnt = count($ro)) {
+                        case 0:
+                            unset($ro);
+                            break;
+                        case 1:
+                            $ro1 = $ro = $ro[0];
+                            break;
+                        default:
+                            $idx = rand(0, $cnt - 1);
+                            $ro1 = $ro[$idx];
                     }
                 }
             }
-            if (isset($ro)) {
+            if (isset($ro1)) {
                 try {
-                    parent::connect($ro, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
+                    parent::connect($ro1, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
                     $this->dbhreadonly = $this->db_handle();
                 } catch (dml_connection_exception $e) {
-                    debugging("$e");
+                    error_log("$e");
+
+                    if (is_array($ro)) {
+                        foreach ($ro as $ro2) {
+                            if ($ro2 == $ro1) {
+                                continue;
+                            }
+                            try {
+                                parent::connect($ro2, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
+                                $this->dbhreadonly = $this->db_handle();
+                                break;
+                            } catch (dml_connection_exception $e) {
+                            }
+                        }
+                    }
                 }
             }
         }
