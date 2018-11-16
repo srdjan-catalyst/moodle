@@ -255,19 +255,11 @@ class core_dml_read_slave_testcase extends base_testcase {
         $this->assertEquals(0, $DB->perf_get_reads_before_write());
 
         $handle = $DB->get_records('test_table2');
+        $this->assertStringStartsWith('test_ro', $handle);
+        $this->assertEquals(1, $DB->perf_get_reads_before_write());
+
+        $handle = $DB->get_records_sql("SELECT * FROM {test_table2} JOIN {test_table}");
         $this->assertEquals('test_rw', $handle);
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
-    }
-
-    public function test_transaction_read() {
-        $DB = $this->new_db();
-
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
-
-        $transaction = $DB->start_delegated_transaction();
-
-        $handle = $DB->get_records('test_table');
-        $this->assertEquals('test_rw', $handle);
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
+        $this->assertEquals(1, $DB->perf_get_reads_before_write());
     }
 }
