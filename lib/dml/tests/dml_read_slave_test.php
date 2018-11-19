@@ -37,6 +37,7 @@ require_once(__DIR__.'/fixtures/test_moodle_database.php');
 class base_test_moodle_database extends test_moodle_database {
     /** @var string */
     protected $handle;
+    public $txn_handle;
 
     /**
      * Does not connect to the database. Sets handle property to $dbhost
@@ -57,6 +58,7 @@ class base_test_moodle_database extends test_moodle_database {
      * @return void
      */
     protected function begin_transaction() {
+        $this->txn_handle = $this->handle;
     }
 
     /**
@@ -64,6 +66,7 @@ class base_test_moodle_database extends test_moodle_database {
      * @return void
      */
     protected function commit_transaction() {
+        $this->txn_handle = $this->handle;
     }
 
     /**
@@ -71,6 +74,7 @@ class base_test_moodle_database extends test_moodle_database {
      * @return void
      */
     protected function rollback_transaction() {
+        $this->txn_handle = $this->handle;
     }
 
     /**
@@ -261,5 +265,32 @@ class core_dml_read_slave_testcase extends base_testcase {
         $handle = $DB->get_records_sql("SELECT * FROM {test_table2} JOIN {test_table}");
         $this->assertEquals('test_rw', $handle);
         $this->assertEquals(1, $DB->perf_get_reads_before_write());
+    }
+
+    public function test_transaction_commit() {
+        $DB = $this->new_db();
+
+        $DB->txn_handle = null;
+        $transaction = $DB->start_delegated_transaction();
+        $this->assertEquals('test_rw', $DB->txn_handle);
+
+        $DB->txn_handle = null;
+        $transaction->allow_commit();
+        $this->assertEquals('test_rw', $DB->txn_handle);
+    }
+
+    public function test_transaction_rollback() {
+        $DB = $this->new_db();
+
+        $DB->txn_handle = null;
+        $transaction = $DB->start_delegated_transaction();
+        $this->assertEquals('test_rw', $DB->txn_handle);
+
+        $DB->txn_handle = null;
+        try {
+            $transaction->rollback(new Exception("Dummy"));
+        } catch (Exception $e) {
+        }
+        $this->assertEquals('test_rw', $DB->txn_handle);
     }
 }

@@ -132,7 +132,8 @@ trait moodle_read_slave_trait {
         $isreadonly = true;
         switch ($type) {
             case SQL_QUERY_AUX:
-                break;
+                # Transactions are done as AUX, we cannot play with that
+                return;
             case SQL_QUERY_SELECT:
                 foreach ($this->table_names($sql) as $t) {
                     if (isset($this->written[$t])) {
