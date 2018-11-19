@@ -29,7 +29,7 @@ trait moodle_read_slave_trait {
 
     private $dbhwrite;
     private $dbhreadonly;
-    private $readsbeforewrite = 0;
+    private $readsslave = 0;
 
     /** @var array Tables that has been written to */
     protected $written = array();
@@ -110,8 +110,8 @@ trait moodle_read_slave_trait {
      * Returns the number of reads before first write done by this database.
      * @return int Number of reads.
      */
-    public function perf_get_reads_before_write() {
-        return $this->readsbeforewrite;
+    public function perf_get_reads_slave() {
+        return $this->readsslave;
     }
 
     /**
@@ -142,7 +142,7 @@ trait moodle_read_slave_trait {
                     }
                 }
                 if ($isreadonly) {
-                    $this->readsbeforewrite++;
+                    $this->readsslave++;
                 }
                 break;
             case SQL_QUERY_INSERT:

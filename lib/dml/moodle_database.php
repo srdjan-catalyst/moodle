@@ -2668,7 +2668,7 @@ abstract class moodle_database {
      * Returns the number of reads before first write done by this database.
      * @return int Number of reads.
      */
-    public function perf_get_reads_before_write() {
+    public function perf_get_reads_slave() {
         return 0;
     }
 
