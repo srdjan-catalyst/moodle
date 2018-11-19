@@ -37,6 +37,7 @@ require_once(__DIR__.'/fixtures/test_moodle_database.php');
 class base_test_moodle_database extends test_moodle_database {
     /** @var string */
     protected $handle;
+    public $txn_handle;
 
     /**
      * Does not connect to the database. Sets handle property to $dbhost
@@ -57,6 +58,7 @@ class base_test_moodle_database extends test_moodle_database {
      * @return void
      */
     protected function begin_transaction() {
+        $this->txn_handle = $this->handle;
     }
 
     /**
@@ -64,6 +66,7 @@ class base_test_moodle_database extends test_moodle_database {
      * @return void
      */
     protected function commit_transaction() {
+        $this->txn_handle = $this->handle;
     }
 
     /**
@@ -71,6 +74,7 @@ class base_test_moodle_database extends test_moodle_database {
      * @return void
      */
     protected function rollback_transaction() {
+        $this->txn_handle = $this->handle;
     }
 
     /**
@@ -201,17 +205,17 @@ class core_dml_read_slave_testcase extends base_testcase {
     public function test_read_read_write_read() {
         $DB = $this->new_db();
 
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
+        $this->assertEquals(0, $DB->perf_get_reads_slave());
 
         $handle = $DB->get_records('test_table');
         $this->assertStringStartsWith('test_ro', $handle);
-        $readsbeforewrite = $DB->perf_get_reads_before_write();
-        $this->assertGreaterThan(0, $readsbeforewrite);
+        $readsslave = $DB->perf_get_reads_slave();
+        $this->assertGreaterThan(0, $readsslave);
 
         $handle = $DB->get_records('test_table2');
         $this->assertStringStartsWith('test_ro', $handle);
-        $readsbeforewrite = $DB->perf_get_reads_before_write();
-        $this->assertGreaterThan(1, $readsbeforewrite);
+        $readsslave = $DB->perf_get_reads_slave();
+        $this->assertGreaterThan(1, $readsslave);
 
         $handle = $DB->insert_record_raw('test_table', array('name' => 'blah'));
         $this->assertEquals('test_rw', $handle);
@@ -219,18 +223,18 @@ class core_dml_read_slave_testcase extends base_testcase {
         $DB->get_records('test_table');
         $this->assertEquals('test_rw', $handle);
 
-        $this->assertEquals($readsbeforewrite, $DB->perf_get_reads_before_write());
+        $this->assertEquals($readsslave, $DB->perf_get_reads_slave());
     }
 
     public function test_read_write_write() {
         $DB = $this->new_db();
 
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
+        $this->assertEquals(0, $DB->perf_get_reads_slave());
 
         $handle = $DB->get_records('test_table');
         $this->assertStringStartsWith('test_ro', $handle);
-        $readsbeforewrite = $DB->perf_get_reads_before_write();
-        $this->assertGreaterThan(0, $readsbeforewrite);
+        $readsslave = $DB->perf_get_reads_slave();
+        $this->assertGreaterThan(0, $readsslave);
 
         $handle = $DB->insert_record_raw('test_table', array('name' => 'blah'));
         $this->assertEquals('test_rw', $handle);
@@ -238,36 +242,55 @@ class core_dml_read_slave_testcase extends base_testcase {
         $handle = $DB->update_record_raw('test_table', array('name' => 'blah2'));
         $this->assertEquals('test_rw', $handle);
 
-        $this->assertEquals($readsbeforewrite, $DB->perf_get_reads_before_write());
+        $this->assertEquals($readsslave, $DB->perf_get_reads_slave());
     }
 
     public function test_write_read_read() {
         $DB = $this->new_db();
 
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
+        $this->assertEquals(0, $DB->perf_get_reads_slave());
 
         $handle = $DB->insert_record_raw('test_table', array('name' => 'blah'));
         $this->assertEquals('test_rw', $handle);
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
+        $this->assertEquals(0, $DB->perf_get_reads_slave());
 
         $handle = $DB->get_records('test_table');
         $this->assertEquals('test_rw', $handle);
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
+        $this->assertEquals(0, $DB->perf_get_reads_slave());
 
         $handle = $DB->get_records('test_table2');
+        $this->assertStringStartsWith('test_ro', $handle);
+        $this->assertEquals(1, $DB->perf_get_reads_slave());
+
+        $handle = $DB->get_records_sql("SELECT * FROM {test_table2} JOIN {test_table}");
         $this->assertEquals('test_rw', $handle);
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
+        $this->assertEquals(1, $DB->perf_get_reads_slave());
     }
 
-    public function test_transaction_read() {
+    public function test_transaction_commit() {
         $DB = $this->new_db();
 
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
-
+        $DB->txn_handle = null;
         $transaction = $DB->start_delegated_transaction();
+        $this->assertEquals('test_rw', $DB->txn_handle);
 
-        $handle = $DB->get_records('test_table');
-        $this->assertEquals('test_rw', $handle);
-        $this->assertEquals(0, $DB->perf_get_reads_before_write());
+        $DB->txn_handle = null;
+        $transaction->allow_commit();
+        $this->assertEquals('test_rw', $DB->txn_handle);
+    }
+
+    public function test_transaction_rollback() {
+        $DB = $this->new_db();
+
+        $DB->txn_handle = null;
+        $transaction = $DB->start_delegated_transaction();
+        $this->assertEquals('test_rw', $DB->txn_handle);
+
+        $DB->txn_handle = null;
+        try {
+            $transaction->rollback(new Exception("Dummy"));
+        } catch (Exception $e) {
+        }
+        $this->assertEquals('test_rw', $DB->txn_handle);
     }
 }

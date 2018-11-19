@@ -27,8 +27,12 @@ defined('MOODLE_INTERNAL') || die();
 
 trait moodle_read_slave_trait {
 
-    protected $dbhwrite;
-    protected $dbhreadonly;
+    private $dbhwrite;
+    private $dbhreadonly;
+    private $readsslave = 0;
+
+    /** @var array Tables that has been written to */
+    protected $written = array();
 
     /**
      * Gets db handle currently used with queries
@@ -55,7 +59,7 @@ trait moodle_read_slave_trait {
      * @return bool true
      * @throws dml_connection_exception if error
      */
-    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, $dboptions = array()) {
+    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions = null) {
         if ($dboptions) {
             if (isset($dboptions['dbhost_readonly'])) {
                 $ro = $dboptions['dbhost_readonly'];
@@ -103,6 +107,14 @@ trait moodle_read_slave_trait {
     }
 
     /**
+     * Returns the number of reads before first write done by this database.
+     * @return int Number of reads.
+     */
+    public function perf_get_reads_slave() {
+        return $this->readsslave;
+    }
+
+    /**
      * Called before each db query.
      * @param string $sql
      * @param array $params
@@ -113,9 +125,44 @@ trait moodle_read_slave_trait {
     protected function query_start($sql, array $params=null, $type, $extrainfo=null) {
         parent::query_start($sql, $params, $type, $extrainfo);
 
-        if ($this->dbhreadonly && $this->isreadonly) {
+        if ($this->loggingquery) {
+            return;
+        }
+
+        $isreadonly = true;
+        switch ($type) {
+            case SQL_QUERY_AUX:
+                # Transactions are done as AUX, we cannot play with that
+                return;
+            case SQL_QUERY_SELECT:
+                foreach ($this->table_names($sql) as $t) {
+                    if (isset($this->written[$t])) {
+                        $isreadonly = false;
+                        break;
+                    }
+                }
+                if ($isreadonly) {
+                    $this->readsslave++;
+                }
+                break;
+            case SQL_QUERY_INSERT:
+            case SQL_QUERY_UPDATE:
+            case SQL_QUERY_STRUCTURE:
+                $isreadonly = false;
+                foreach ($this->table_names($sql) as $t) {
+                    $this->written[$t] = true;
+                }
+                break;
+        }
+
+        if ($this->dbhreadonly && $isreadonly) {
             $this->set_db_handle($this->dbhreadonly);
         }
+    }
+
+    private function table_names($sql) {
+        preg_match_all('/\b'.$this->prefix.'([a-z][a-z0-9_]*)/', $sql, $match);
+        return $match[0];
     }
 
     /**
