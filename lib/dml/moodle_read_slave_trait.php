@@ -123,6 +123,10 @@ trait moodle_read_slave_trait {
      * @return void
      */
     protected function query_start($sql, array $params=null, $type, $extrainfo=null) {
+        $this->_query_start($sql, $params, $type, $extrainfo);
+    }
+
+    protected function _query_start($sql, array $params=null, $type, $extrainfo=null) {
         parent::query_start($sql, $params, $type, $extrainfo);
 
         if ($this->loggingquery) {
@@ -171,9 +175,13 @@ trait moodle_read_slave_trait {
      * @return void
      */
     protected function query_end($result) {
-        parent::query_end($result);
+        $this->_query_end($result);
+    }
+
+    protected function _query_end($result) {
         if ($this->dbhwrite) { // Sometimes handlers do queries from connect()
             $this->set_db_handle($this->dbhwrite);
         }
+        parent::query_end($result);
     }
 }

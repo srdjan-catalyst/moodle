@@ -39,6 +39,8 @@ require_once(__DIR__.'/moodle_read_slave_trait.php');
 class pgsql_read_slave_native_moodle_database extends pgsql_native_moodle_database {
     use moodle_read_slave_trait;
 
+    private $dbhcursor = array();
+
     /**
      * Returns more specific database driver type
      * Note: can be used before connect()
@@ -63,5 +65,25 @@ class pgsql_read_slave_native_moodle_database extends pgsql_native_moodle_databa
      */
     protected function set_db_handle($dbh) {
         $this->pgsql = $dbh;
+    }
+
+    /**
+     * Called before each db query.
+     * @param string $sql
+     * @param array $params
+     * @param int $type type of query
+     * @param mixed $extrainfo driver specific extra information
+     * @return void
+     */
+    protected function query_start($sql, array $params=null, $type, $extrainfo=null) {
+        $this->_query_start($sql, $params, $type, $extrainfo);
+        if (preg_match('/^DECLARE (crs\w*) NO SCROLL CURSOR/', $sql, $match)) {
+            $cursor = $match[1];
+            $this->dbhcursor[$cursor] = $this->pgsql;
+        }
+        if (preg_match('/^(?:FETCH \d+ FROM|CLOSE) (crs\w*)\b/', $sql, $match)) {
+            $cursor = $match[1];
+            $this->pgsql = $this->dbhcursor[$cursor];
+        }
     }
 }
