@@ -741,8 +741,6 @@ class pgsql_native_moodle_database extends moodle_database {
 
         list($sql, $params, $type) = $this->fix_sql_params($sql, $params);
 
-        $this->query_start($sql, $params, SQL_QUERY_SELECT);
-
         // For any query that doesn't explicitly specify a limit, we must use cursors to stop it
         // loading the entire thing (unless the config setting is turned off).
         $usecursors = !$limitnum && ($this->get_fetch_buffer_size() > 0);
@@ -755,11 +753,13 @@ class pgsql_native_moodle_database extends moodle_database {
 
             // Do the query to a cursor.
             $sql = 'DECLARE ' . $cursorname . ' NO SCROLL CURSOR WITH HOLD FOR ' . $sql;
-            $result = pg_query_params($this->pgsql, $sql, $params);
         } else {
-            $result = pg_query_params($this->pgsql, $sql, $params);
             $cursorname = '';
         }
+
+        $this->query_start($sql, $params, SQL_QUERY_SELECT);
+
+        $result = pg_query_params($this->pgsql, $sql, $params);
 
         $this->query_end($result);
         if ($usecursors) {
