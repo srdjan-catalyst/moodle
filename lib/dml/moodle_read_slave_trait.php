@@ -129,6 +129,10 @@ trait moodle_read_slave_trait {
     protected function _query_start($sql, array $params=null, $type, $extrainfo=null) {
         parent::query_start($sql, $params, $type, $extrainfo);
 
+        if (!$this->dbhreadonly) {
+            return;
+        }
+
         if ($this->loggingquery) {
             return;
         }
@@ -159,14 +163,14 @@ trait moodle_read_slave_trait {
                 break;
         }
 
-        if ($this->dbhreadonly && $isreadonly) {
+        if ($isreadonly) {
             $this->set_db_handle($this->dbhreadonly);
         }
     }
 
-    private function table_names($sql) {
-        preg_match_all('/\b'.$this->prefix.'([a-z][a-z0-9_]*)/', $sql, $match);
-        return $match[0];
+    protected function table_names($sql) {
+        preg_match_all('/\b'.$this->prefix.'([a-z][A-Za-z0-9_]*)/', $sql, $match);
+        return $match[1];
     }
 
     /**

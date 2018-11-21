@@ -51,6 +51,7 @@ class base_test_moodle_database extends test_moodle_database {
      */
     public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
         $this->handle = $dbhost;
+        $this->prefix = $prefix;
     }
 
     /**
@@ -161,6 +162,22 @@ class read_slave_moodle_database extends base_test_moodle_database {
 }
 
 /**
+ * Database driver test class that exposes table_names()
+ *
+ * @package    core
+ * @category   dml
+ * @copyright  2018 Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class read_slave_moodle_database_table_names extends read_slave_moodle_database {
+    protected $prefix = 't_';
+
+    public function table_names($sql) {
+        return parent::table_names($sql);
+    }
+}
+
+/**
  * DML read/read-write database handle use tests
  *
  * @package    core
@@ -194,12 +211,52 @@ class core_dml_read_slave_testcase extends base_testcase {
         $dbname = 'test';
         $dbuser = 'test';
         $dbpass = 'test';
-        $prefix = 'test';
+        $prefix = 'test_';
         $dboptions = array('dbhost_readonly' => ['test_ro1', 'test_ro2']);
 
         $db = new read_slave_moodle_database();
         $db->connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
         return $db;
+    }
+
+    public function test_table_names() {
+        $t = array(
+            "SELECT *
+             FROM {user} u
+             JOIN (
+                 SELECT DISTINCT u.id FROM {user} u
+                 JOIN {user_enrolments} ue1 ON ue1.userid = u.id
+                 JOIN {enrol} e ON e.id = ue1.enrolid
+                 WHERE u.id NOT IN (
+                     SELECT DISTINCT ue.userid FROM {user_enrolments} ue
+                     JOIN {enrol} e ON (e.id = ue.enrolid AND e.courseid = 1)
+                     WHERE ue.status = 'active'
+                       AND e.status = 'enabled'
+                       AND ue.timestart < now()
+                       AND (ue.timeend = 0 OR ue.timeend > now())
+                 )
+             ) je ON je.id = u.id
+             JOIN (
+                 SELECT DISTINCT ra.userid
+                   FROM {role_assignments} ra
+                  WHERE ra.roleid IN (1, 2, 3)
+                    AND ra.contextid = 'ctx'
+              ) rainner ON rainner.userid = u.id
+              WHERE u.deleted = 0" => [
+                'user',
+                'user',
+                'user_enrolments',
+                'enrol',
+                'user_enrolments',
+                'enrol',
+                'role_assignments',
+            ],
+        );
+
+        $db = new read_slave_moodle_database_table_names();
+        foreach ($t as $sql => $tables) {
+            $this->assertEquals($tables, $db->table_names($db->fix_sql_params($sql)[0]));
+        }
     }
 
     public function test_read_read_write_read() {
