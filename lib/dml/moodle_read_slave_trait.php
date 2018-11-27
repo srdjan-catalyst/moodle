@@ -27,12 +27,17 @@ defined('MOODLE_INTERNAL') || die();
 
 trait moodle_read_slave_trait {
 
-    private $dbhwrite;
-    private $dbhreadonly;
-    private $readsslave = 0;
+    /** @var resource master write database handle */
+    protected $dbhwrite;
 
-    /** @var array Tables that has been written to */
-    protected $written = array();
+    /** @var resource slave read only database handle */
+    protected $dbhreadonly;
+
+    private $readsslave = 0;
+    private $slavelatency = 0;
+
+    private $written = array();
+    private $readexclude = array();
 
     /**
      * Gets db handle currently used with queries
@@ -82,6 +87,15 @@ trait moodle_read_slave_trait {
                 try {
                     parent::connect($ro1, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
                     $this->dbhreadonly = $this->db_handle();
+                    if (isset($dboptions['db_readonly_latency'])) {
+                        $this->slavelatency = $dboptions['db_readonly_latency'];
+                    }
+                    if (isset($dboptions['db_readonly_exclude_tables'])) {
+                        $this->readexclude = $dboptions['db_readonly_exclude_tables'];
+                        if (!is_array($this->readexclude)) {
+                            throw new configuration_exception('db_readonly_exclude_tables must be an array');
+                        }
+                    }
                 } catch (dml_connection_exception $e) {
                     error_log("$e");
 
@@ -107,7 +121,7 @@ trait moodle_read_slave_trait {
     }
 
     /**
-     * Returns the number of reads before first write done by this database.
+     * Returns the number of reads done by the read only database.
      * @return int Number of reads.
      */
     public function perf_get_reads_slave() {
@@ -137,34 +151,48 @@ trait moodle_read_slave_trait {
             return;
         }
 
-        $isreadonly = true;
+        // lock_db queries always go to master
+        if (preg_match('/lock_db\b/', $sql)) {
+            return;
+        }
+
+        # Transactions are done as AUX, we cannot play with that
         switch ($type) {
-            case SQL_QUERY_AUX:
-                # Transactions are done as AUX, we cannot play with that
-                return;
             case SQL_QUERY_SELECT:
+                $now = null;
                 foreach ($this->table_names($sql) as $t) {
+                    if (in_array($t, $this->readexclude)) {
+                        break 2;
+                    }
+
+                    if ($this->temptables->is_temptable($t)) {
+                        break 2;
+                    }
+
                     if (isset($this->written[$t])) {
-                        $isreadonly = false;
-                        break;
+                        if ($this->slavelatency) {
+                            $now = $now ?: microtime(true);
+                            if ($now - $this->written[$t] < $this->slavelatency) {
+                                break 2;
+                            }
+                        }
+                        else {
+                            break 2;
+                        }
                     }
                 }
-                if ($isreadonly) {
-                    $this->readsslave++;
-                }
+
+                $this->readsslave++;
+                $this->set_db_handle($this->dbhreadonly);
                 break;
             case SQL_QUERY_INSERT:
             case SQL_QUERY_UPDATE:
             case SQL_QUERY_STRUCTURE:
-                $isreadonly = false;
+                $now = $this->slavelatency ? microtime(true) : true;
                 foreach ($this->table_names($sql) as $t) {
-                    $this->written[$t] = true;
+                    $this->written[$t] = $now;
                 }
                 break;
-        }
-
-        if ($isreadonly) {
-            $this->set_db_handle($this->dbhreadonly);
         }
     }
 

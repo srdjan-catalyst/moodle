@@ -76,6 +76,11 @@ class pgsql_read_slave_native_moodle_database extends pgsql_native_moodle_databa
      * @return void
      */
     protected function query_start($sql, array $params=null, $type, $extrainfo=null) {
+        // pg_* queries always go to master
+        if (preg_match('/\bpg_/', $sql)) {
+            return parent::query_start($sql, $params, $type, $extrainfo);
+        }
+
         $this->_query_start($sql, $params, $type, $extrainfo);
         if (preg_match('/^DECLARE (crs\w*) NO SCROLL CURSOR/', $sql, $match)) {
             $cursor = $match[1];
@@ -85,5 +90,14 @@ class pgsql_read_slave_native_moodle_database extends pgsql_native_moodle_databa
             $cursor = $match[1];
             $this->pgsql = $this->dbhcursor[$cursor];
         }
+    }
+
+    /**
+     * Called immediately after each db query.
+     * @param mixed $result db specific
+     * @return void
+     */
+    protected function query_end($result) {
+        $this->_query_end($result);
     }
 }

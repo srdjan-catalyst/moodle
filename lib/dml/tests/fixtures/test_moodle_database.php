@@ -19,13 +19,102 @@
  *
  * @package    core
  * @category   dml
- * @copyright  2018 Catalyst IT
+ * @copyright  2018 Srdjan Janković, Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__.'/../../moodle_database.php');
+require_once(__DIR__.'/../../moodle_temptables.php');
+require_once(__DIR__.'/../../../ddl/database_manager.php');
+require_once(__DIR__.'/../../../ddl/sql_generator.php');
+
+/**
+ * Test sql generator class
+ *
+ * @package    core
+ * @category   ddl
+ * @copyright  2018 Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class test_sql_generator extends sql_generator {
+    /**
+     * Reset a sequence to the id field of a table.
+     *
+     * @param xmldb_table|string $table name of table or the table object.
+     * @return array of sql statements
+     */
+    public function getResetSequenceSQL($table) {
+        return array();
+    }
+
+    /**
+     * Given one correct xmldb_table, returns the SQL statements
+     * to create temporary table (inside one array).
+     *
+     * @param xmldb_table $xmldb_table The xmldb_table object instance.
+     * @return array of sql statements
+     */
+    public function getCreateTempTableSQL($xmldb_table) {
+        return array();
+    }
+
+    /**
+     * Given one XMLDB Type, length and decimals, returns the DB proper SQL type.
+     *
+     * @param int $xmldb_type The xmldb_type defined constant. XMLDB_TYPE_INTEGER and other XMLDB_TYPE_* constants.
+     * @param int $xmldb_length The length of that data type.
+     * @param int $xmldb_decimals The decimal places of precision of the data type.
+     * @return string The DB defined data type.
+     */
+    public function getTypeSQL($xmldb_type, $xmldb_length=null, $xmldb_decimals=null) {
+        return '';
+    }
+
+    /**
+     * Returns the code (array of statements) needed to add one comment to the table.
+     *
+     * @param xmldb_table $xmldb_table The xmldb_table object instance.
+     * @return array Array of SQL statements to add one comment to the table.
+     */
+    function getCommentSQL ($xmldb_table) {
+        return array();
+    }
+
+    /**
+     * Given one xmldb_table and one xmldb_field, return the SQL statements needed to add its default
+     * (usually invoked from getModifyDefaultSQL()
+     *
+     * @param xmldb_table $xmldb_table The xmldb_table object instance.
+     * @param xmldb_field $xmldb_field The xmldb_field object instance.
+     * @return array Array of SQL statements to create a field's default.
+     */
+    public function getCreateDefaultSQL($xmldb_table, $xmldb_field) {
+        return array();
+    }
+
+    /**
+     * Given one xmldb_table and one xmldb_field, return the SQL statements needed to drop its default
+     * (usually invoked from getModifyDefaultSQL()
+     *
+     * @param xmldb_table $xmldb_table The xmldb_table object instance.
+     * @param xmldb_field $xmldb_field The xmldb_field object instance.
+     * @return array Array of SQL statements to create a field's default.
+     */
+    public function getDropDefaultSQL($xmldb_table, $xmldb_field) {
+        return array();
+    }
+
+    /**
+     * Returns an array of reserved words (lowercase) for this DB
+     * @return array An array of database specific reserved words
+     */
+    public static function getReservedWords() {
+        return array();
+    }
+
+}
 
 /**
  * Abstract database driver test class
@@ -39,6 +128,16 @@ abstract class test_moodle_database extends moodle_database {
 
     /** @var string */
     private $error;
+
+    /**
+     * Constructor - Instantiates the database
+     * @param bool $external True means that an external database is used.
+     */
+    public function __construct($external=false) {
+        parent::__construct($external);
+
+        $this->temptables = new moodle_temptables($this);
+    }
 
     /**
      * Default implementation
@@ -341,5 +440,20 @@ abstract class test_moodle_database extends moodle_database {
      */
     protected function rollback_transaction() {
         throw new Exception("rollback_transaction() not implemented");
+    }
+
+    /**
+     * Returns the sql generator used for db manipulation.
+     * Used mostly in upgrade.php scripts.
+     * @return database_manager The instance used to perform ddl operations.
+     * @see lib/ddl/database_manager.php
+     */
+    public function get_manager() {
+        if (!$this->database_manager) {
+            $generator = new test_sql_generator($this, $this->temptables);
+
+            $this->database_manager = new database_manager($this, $generator);
+        }
+        return $this->database_manager;
     }
 }
