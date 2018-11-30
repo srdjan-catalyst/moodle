@@ -47,7 +47,3 @@
 	branch = master
         path = auth/outage
 	url = git@github.com:catalyst/moodle-auth_outage.git
-[submodule "auth/catalyst"]
-        branch = STABLE_33
-	path = auth/catalyst
-	url = git@git.catalyst-au.net:elearning/mdl-auth_catalyst.git
