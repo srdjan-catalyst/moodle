@@ -3,6 +3,11 @@
 	branch = master
 	path = admin/tool/heartbeat
 	url = git@github.com:catalyst/moodle-tool_heartbeat.git
+[submodule "auth/catalyst"]
+	autoupdate = merge
+	branch = STABLE_33
+	path = auth/catalyst
+	url = git@git.catalyst-au.net:elearning/mdl-auth_catalyst.git
 [submodule "lib/editor/atto/plugins/preview"]
 	branch = master
 	path = lib/editor/atto/plugins/preview
@@ -27,23 +32,23 @@
 	path = admin/tool/objectfs
 	url = git@github.com:catalyst/moodle-tool_objectfs.git
 [submodule "local/aws"]
-        autoupdate = merge
-        branch = master
+  autoupdate = merge
+  branch = master
 	path = local/aws
 	url = https://github.com/catalyst/moodle-local_aws.git
 [submodule "local/boostnavigation"]
 	branch = master
-        path = local/boostnavigation
+  path = local/boostnavigation
 	url = git@github.com:moodleuulm/moodle-local_boostnavigation.git
 [submodule "lib/editor/atto/plugins/htmlplus"]
 	branch = master
-        path = lib/editor/atto/plugins/htmlplus
+  path = lib/editor/atto/plugins/htmlplus
 	url = git@github.com:andrewnicols/moodle-atto_htmlplus.git
 [submodule "search/engine/elastic"]
 	branch = master
-        path = search/engine/elastic
+  path = search/engine/elastic
 	url = git@github.com:catalyst/moodle-search_elastic.git
 [submodule "auth/outage"]
 	branch = master
-        path = auth/outage
+  path = auth/outage
 	url = git@github.com:catalyst/moodle-auth_outage.git
