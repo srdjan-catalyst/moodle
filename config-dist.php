@@ -82,6 +82,9 @@ $CFG->dboptions = array(
     // 'dbhost_readonly' => ['slave1.db', 'slave2.db'], // Set to read-only slave hosts, to get
                                 // safe reads from there instead of master node.
                                 // Needs a db driver that supports the feature.
+    // 'connectionretrydelay' => 1, // If datbase connection fails, retry in
+                                // connectionretrydelay seconds. Default 1.
+                                // Designed to mitigate transient network problems.
 );
 
 

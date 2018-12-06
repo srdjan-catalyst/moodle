@@ -336,8 +336,18 @@ function setup_DB() {
         throw new dml_exception('dbdriverproblem', "Unknown driver $CFG->dblibrary/$CFG->dbtype");
     }
 
+    $retrydelay = 1;
+    if (isset($CFG->dboptions['connectionretrydelay'])) {
+        $retrydelay =  $CFG->dboptions['connectionretrydelay'];
+    }
+
     try {
-        $DB->connect($CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname, $CFG->prefix, $CFG->dboptions);
+        try {
+            $DB->connect($CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname, $CFG->prefix, $CFG->dboptions);
+        } catch (dml_connection_exception $e) {
+            sleep($retrydelay);
+            $DB->connect($CFG->dbhost, $CFG->dbuser, $CFG->dbpass, $CFG->dbname, $CFG->prefix, $CFG->dboptions);
+        }
     } catch (moodle_exception $e) {
         if (empty($CFG->noemailever) and !empty($CFG->emailconnectionerrorsto)) {
             $body = "Connection error: ".$CFG->wwwroot.
