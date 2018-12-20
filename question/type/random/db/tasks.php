@@ -15,15 +15,24 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * This file contains the version information for the comments feedback plugin
+ * Definition of question/type/random scheduled tasks.
  *
- * @package assignfeedback_editpdf
- * @copyright  2012 Davo Smith
+ * @package   qtype_random
+ * @category  task
+ * @copyright 2018 Bo Pierce <email.bO.pierce@gmail.com>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2018051401;
-$plugin->requires  = 2018050800;
-$plugin->component = 'assignfeedback_editpdf';
+$tasks = array(
+    array(
+        'classname' => 'qtype_random\task\remove_unused_questions',
+        'blocking' => 0,
+        'minute' => 'R',
+        'hour' => '*',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '*'
+    )
+);
