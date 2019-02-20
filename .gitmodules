@@ -1,4 +1,5 @@
 [submodule "auth/catalyst"]
+	autoupdate = merge
 	path = auth/catalyst
 	url = git@git.catalyst-au.net:elearning/mdl-auth_catalyst.git
 	branch = master
@@ -11,10 +12,12 @@
 	url = git@github.com:bmbrands/moodle-local_analytics.git
 	branch = master
 [submodule "local/datacleaner"]
+	autoupdate = merge
 	path = local/datacleaner
 	url = git@github.com:brendanheywood/moodle-local_datacleaner.git
 	branch = master
 [submodule "local/envbar"]
+	autoupdate = merge
 	path = local/envbar
 	url = git@github.com:CatalystIT-AU/moodle-local_envbar.git
 	branch = master
@@ -23,6 +26,7 @@
 	url = git@github.com:mikasmart/benchmark.git
 	branch = master
 [submodule "admin/tool/heartbeat"]
+	autoupdate = merge
 	path = admin/tool/heartbeat
 	url = git@github.com:brendanheywood/moodle-tool_heartbeat.git
 	branch = master
