@@ -26,3 +26,7 @@
 	path = admin/tool/heartbeat
 	url = git@github.com:brendanheywood/moodle-tool_heartbeat.git
 	branch = master
+[submodule "admin/tool/objectfs"]
+	path = admin/tool/objectfs
+	url = git@github.com:catalyst/moodle-tool_objectfs.git
+	branch = master
