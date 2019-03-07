@@ -15,24 +15,23 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version information for the multi-answer question type.
+ * Fixture for testing secure layout pages have no nav link.
  *
- * @package    qtype
- * @subpackage multianswer
- * @copyright  1999 onwards Martin Dougiamas  {@link http://moodle.com}
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package core
+ * @copyright 2019 Luca Bösch <luca.boesch@bfh.ch>
+ * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+require_once(__DIR__ . '/../../../config.php');
+// Behat test fixture only.
+defined('BEHAT_SITE_RUNNING') || die('Only available on Behat test server');
 
-$plugin->component = 'qtype_multianswer';
-$plugin->version   = 2018120301;
+$PAGE->set_pagelayout('secure');
+$PAGE->set_url('/lib/tests/fixtures/securetestpage.php');
+$PAGE->set_context(context_system::instance());
 
-$plugin->requires  = 2018112800;
-$plugin->dependencies = array(
-    'qtype_multichoice' => 2018112800,
-    'qtype_numerical'   => 2018112800,
-    'qtype_shortanswer' => 2018112800,
-);
+echo $OUTPUT->header();
 
-$plugin->maturity  = MATURITY_STABLE;
+echo $OUTPUT->heading('Hello world');
+
+echo $OUTPUT->footer();
