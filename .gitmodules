@@ -3,6 +3,11 @@
 	branch = master
 	path = admin/tool/heartbeat
 	url = git@github.com:catalyst/moodle-tool_heartbeat.git
+[submodule "admin/tool/webanalytics"]
+        autoupdate = merge
+        path = admin/tool/webanalytics
+        url = git@github.com:catalyst/moodle-tool_webanalytics.git
+        branch = master
 [submodule "auth/catalyst"]
 	autoupdate = merge
 	branch = STABLE_33
