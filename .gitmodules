@@ -50,8 +50,9 @@
   path = lib/editor/atto/plugins/htmlplus
 	url = git@github.com:andrewnicols/moodle-atto_htmlplus.git
 [submodule "search/engine/elastic"]
+        autoupdate = merge
 	branch = master
-  path = search/engine/elastic
+        path = search/engine/elastic
 	url = git@github.com:catalyst/moodle-search_elastic.git
 [submodule "auth/outage"]
 	branch = master
