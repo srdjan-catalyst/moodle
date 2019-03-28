@@ -44,6 +44,11 @@
 	path = report/benchmark
 	url = git@github.com:mikasmart/benchmark.git
 	branch = master
+[submodule "search/engine/elastic"]
+        autoupdate = merge
+        path = search/engine/elastic
+        url = git@github.com:catalyst/moodle-search_elastic.git
+        branch = master
 [submodule "admin/tool/heartbeat"]
 	autoupdate = merge
 	path = admin/tool/heartbeat
