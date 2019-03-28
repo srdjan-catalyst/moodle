@@ -20,7 +20,7 @@
 [submodule "local/datacleaner"]
 	autoupdate = merge
 	path = local/datacleaner
-	url = git@github.com:brendanheywood/moodle-local_datacleaner.git
+	url = git@github.com:catalyst/moodle-local_datacleaner.git
 	branch = master
 [submodule "local/envbar"]
 	autoupdate = merge
