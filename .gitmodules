@@ -38,7 +38,7 @@
 [submodule "local/envbar"]
 	autoupdate = merge
 	path = local/envbar
-	url = git@github.com:CatalystIT-AU/moodle-local_envbar.git
+	url = git@github.com:catalyst/moodle-local_envbar.git
 	branch = master
 [submodule "report/benchmark"]
 	path = report/benchmark
