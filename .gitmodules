@@ -8,6 +8,10 @@
 	path = auth/catalyst
 	url = git@git.catalyst-au.net:elearning/mdl-auth_catalyst.git
 	branch = master
+[submodule "lib/editor/atto/plugins/htmlplus"]
+        path = lib/editor/atto/plugins/htmlplus
+        url = git@github.com:andrewnicols/moodle-atto_htmlplus.git
+        branch = master
 [submodule "lib/editor/atto/plugins/preview"]
 	path = lib/editor/atto/plugins/preview
 	url = git@github.com:dthies/moodle-atto_preview.git
