@@ -50,6 +50,7 @@
 	url = git@github.com:catalyst/moodle-tool_heartbeat.git
 	branch = master
 [submodule "admin/tool/objectfs"]
+        autoupdate = merge
 	path = admin/tool/objectfs
 	url = git@github.com:catalyst/moodle-tool_objectfs.git
 	branch = master
