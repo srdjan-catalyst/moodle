@@ -333,6 +333,7 @@ if (file_exists("$CFG->dataroot/climaintenance.html")) {
         header('Expires: Mon, 20 Aug 1969 09:23:00 GMT');
         header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
         header('Accept-Ranges: none');
+        header('X-Moodle-Maintenance: cli');
         readfile("$CFG->dataroot/climaintenance.html");
         die;
     } else {
