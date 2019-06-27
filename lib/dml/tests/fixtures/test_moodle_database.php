@@ -129,9 +129,6 @@ abstract class test_moodle_database extends moodle_database {
     /** @var string */
     private $error;
 
-    /** @var array */
-    private $_tables = array();
-
     /**
      * Constructor - Instantiates the database
      * @param bool $external True means that an external database is used.
@@ -212,15 +209,6 @@ abstract class test_moodle_database extends moodle_database {
      */
     public function get_last_error() {
         return $this->error;
-    }
-
-    /**
-     * Sets tables property
-     * @param array $tables
-     * @return void
-     */
-    public function set_tables($tables) {
-        $this->_tables = $tables;
     }
 
     /**

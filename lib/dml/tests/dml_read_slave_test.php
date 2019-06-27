@@ -19,28 +19,25 @@
  *
  * @package    core
  * @category   dml
- * @copyright  2018 Srdjan Janković, Catalyst IT
+ * @copyright  2018 Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__.'/fixtures/test_moodle_database.php');
-require_once(__DIR__.'/../moodle_read_slave_trait.php');
-
 /**
- * Database driver test class with moodle_read_slave_trait
+ * Database driver test class
  *
  * @package    core
  * @category   dml
  * @copyright  2018 Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class read_slave_moodle_database extends test_moodle_database {
-    use moodle_read_slave_trait;
-
+class base_test_moodle_database extends test_moodle_database {
     /** @var string */
     protected $handle;
+    public $txn_handle;
 
     /**
      * Does not connect to the database. Sets handle property to $dbhost
@@ -52,11 +49,9 @@ class read_slave_moodle_database extends test_moodle_database {
      * @param array $dboptions
      * @return bool true
      */
-    public function _connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
+    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
         $this->handle = $dbhost;
         $this->prefix = $prefix;
-
-        return true;
     }
 
     /**
@@ -64,6 +59,7 @@ class read_slave_moodle_database extends test_moodle_database {
      * @return void
      */
     protected function begin_transaction() {
+        $this->txn_handle = $this->handle;
     }
 
     /**
@@ -71,6 +67,7 @@ class read_slave_moodle_database extends test_moodle_database {
      * @return void
      */
     protected function commit_transaction() {
+        $this->txn_handle = $this->handle;
     }
 
     /**
@@ -78,7 +75,7 @@ class read_slave_moodle_database extends test_moodle_database {
      * @return void
      */
     protected function rollback_transaction() {
-        $this->txnhandle = $this->handle;
+        $this->txn_handle = $this->handle;
     }
 
     /**
@@ -96,14 +93,6 @@ class read_slave_moodle_database extends test_moodle_database {
     }
 
     /**
-     * get_dbhwrite()
-     * @return string $dbhwrite handle property
-     */
-    public function get_dbhwrite() {
-        return $this->dbhwrite;
-    }
-
-    /**
      * get_records_sql() override, calls with_query_start_end()
      * @param string $sql the SQL select query to execute.
      * @param array $params array of sql parameters
@@ -112,7 +101,6 @@ class read_slave_moodle_database extends test_moodle_database {
      * @return string $handle handle property
      */
     public function get_records_sql($sql, array $params=null, $limitfrom=0, $limitnum=0) {
-        list($sql, $params, $type) = $this->fix_sql_params($sql, $params);
         return $this->with_query_start_end($sql, $params, SQL_QUERY_SELECT);
     }
 
@@ -127,14 +115,7 @@ class read_slave_moodle_database extends test_moodle_database {
      * @return string $handle handle property
      */
     public function insert_record_raw($table, $params, $returnid=true, $bulk=false, $customsequence=false) {
-        $fields = implode(',', array_keys($params));
-        $i = 1;
-        foreach ($params as $value) {
-            $values[] = "\$".$i++;
-        }
-        $values = implode(',', $values);
-        $sql = "INSERT INTO {$this->prefix}$table ($fields) VALUES($values)";
-        return $this->with_query_start_end($sql, $params, SQL_QUERY_INSERT);
+        return $this->with_query_start_end($table, $params, SQL_QUERY_INSERT);
     }
 
     /**
@@ -146,18 +127,21 @@ class read_slave_moodle_database extends test_moodle_database {
      * @return string $handle handle property
      */
     public function update_record_raw($table, $params, $bulk=false) {
-        $id = $params['id'];
-        unset($params['id']);
-        $i = 1;
-        $sets = array();
-        foreach ($params as $field => $value) {
-            $sets[] = "$field = \$".$i++;
-        }
-        $params[] = $id;
-        $sets = implode(',', $sets);
-        $sql = "UPDATE {$this->prefix}$table SET $sets WHERE id=\$".$i;
-        return $this->with_query_start_end($sql, $params, SQL_QUERY_UPDATE);
+        return $this->with_query_start_end($table, $params, SQL_QUERY_UPDATE);
     }
+}
+
+require_once(__DIR__.'/../moodle_read_slave_trait.php');
+/**
+ * Database driver test class with moodle_read_slave_trait
+ *
+ * @package    core
+ * @category   dml
+ * @copyright  2018 Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class read_slave_moodle_database extends base_test_moodle_database {
+    use moodle_read_slave_trait;
 
     /**
      * Gets handle property
@@ -175,24 +159,6 @@ class read_slave_moodle_database extends test_moodle_database {
     protected function set_db_handle($dbh) {
         $this->handle = $dbh;
     }
-
-    /**
-     * Add temptable
-     * @param string $temptable
-     * @return void
-     */
-    public function add_temptable($temptable) {
-        $this->temptables->add_temptable($temptable);
-    }
-
-    /**
-     * Remove temptable
-     * @param string $temptable
-     * @return void
-     */
-    public function delete_temptable($temptable) {
-        $this->temptables->delete_temptable($temptable);
-    }
 }
 
 /**
@@ -204,15 +170,8 @@ class read_slave_moodle_database extends test_moodle_database {
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class read_slave_moodle_database_table_names extends read_slave_moodle_database {
-    /**
-     * @var string
-     */
     protected $prefix = 't_';
 
-    /**
-     * Upgrade to public
-     * {@inheritdoc}
-     */
     public function table_names($sql) {
         return parent::table_names($sql);
     }
@@ -227,10 +186,6 @@ class read_slave_moodle_database_table_names extends read_slave_moodle_database 
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class core_dml_read_slave_testcase extends base_testcase {
-
-    /** @var float */
-    static private $dbreadonlylatency = 0.8;
-
     /**
      * Constructs a test case with the given name.
      *
@@ -249,22 +204,15 @@ class core_dml_read_slave_testcase extends base_testcase {
     /**
      * Instantiates a test database interface object
      *
-     * @param bool $wantlatency
      * @return read_slave_moodle_database $db
      */
-    public function new_db($wantlatency=false) {
+    public function new_db() {
         $dbhost = 'test_rw';
         $dbname = 'test';
         $dbuser = 'test';
         $dbpass = 'test';
         $prefix = 'test_';
-        $dboptions = array(
-            'dbhost_readonly' => ['test_ro1', 'test_ro2'],
-            'db_readonly_exclude_tables' => ['exclude']
-        );
-        if ($wantlatency) {
-            $dboptions['db_readonly_latency'] = self::$dbreadonlylatency;
-        }
+        $dboptions = array('dbhost_readonly' => ['test_ro1', 'test_ro2']);
 
         $db = new read_slave_moodle_database();
         $db->connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
@@ -312,57 +260,45 @@ class core_dml_read_slave_testcase extends base_testcase {
     }
 
     public function test_read_read_write_read() {
-        $DB = $this->new_db(true);
+        $DB = $this->new_db();
 
         $this->assertEquals(0, $DB->perf_get_reads_slave());
-        $this->assertNull($DB->get_dbhwrite());
 
-        $handle = $DB->get_records('table');
+        $handle = $DB->get_records('test_table');
         $this->assertStringStartsWith('test_ro', $handle);
         $readsslave = $DB->perf_get_reads_slave();
         $this->assertGreaterThan(0, $readsslave);
-        $this->assertNull($DB->get_dbhwrite());
 
-        $handle = $DB->get_records('table2');
+        $handle = $DB->get_records('test_table2');
         $this->assertStringStartsWith('test_ro', $handle);
         $readsslave = $DB->perf_get_reads_slave();
         $this->assertGreaterThan(1, $readsslave);
-        $this->assertNull($DB->get_dbhwrite());
 
-        $now = microtime(true);
-        $handle = $DB->insert_record_raw('table', array('name' => 'blah'));
+        $handle = $DB->insert_record_raw('test_table', array('name' => 'blah'));
         $this->assertEquals('test_rw', $handle);
 
-        if (microtime(true) - $now < self::$dbreadonlylatency) {
-            $handle = $DB->get_records('table');
-            $this->assertEquals('test_rw', $handle);
-            $this->assertEquals($readsslave, $DB->perf_get_reads_slave());
+        $DB->get_records('test_table');
+        $this->assertEquals('test_rw', $handle);
 
-            sleep(1);
-        }
-
-        $handle = $DB->get_records('table');
-        $this->assertStringStartsWith('test_ro', $handle);
-        $this->assertEquals($readsslave + 1, $DB->perf_get_reads_slave());
+        $this->assertEquals($readsslave, $DB->perf_get_reads_slave());
     }
 
     public function test_read_write_write() {
         $DB = $this->new_db();
 
         $this->assertEquals(0, $DB->perf_get_reads_slave());
-        $this->assertNull($DB->get_dbhwrite());
 
-        $handle = $DB->get_records('table');
+        $handle = $DB->get_records('test_table');
         $this->assertStringStartsWith('test_ro', $handle);
         $readsslave = $DB->perf_get_reads_slave();
         $this->assertGreaterThan(0, $readsslave);
-        $this->assertNull($DB->get_dbhwrite());
 
-        $handle = $DB->insert_record_raw('table', array('name' => 'blah'));
+        $handle = $DB->insert_record_raw('test_table', array('name' => 'blah'));
         $this->assertEquals('test_rw', $handle);
 
-        $handle = $DB->update_record_raw('table', array('id' => 1, 'name' => 'blah2'));
+        $handle = $DB->update_record_raw('test_table', array('name' => 'blah2'));
         $this->assertEquals('test_rw', $handle);
+
         $this->assertEquals($readsslave, $DB->perf_get_reads_slave());
     }
 
@@ -370,58 +306,48 @@ class core_dml_read_slave_testcase extends base_testcase {
         $DB = $this->new_db();
 
         $this->assertEquals(0, $DB->perf_get_reads_slave());
-        $this->assertNull($DB->get_dbhwrite());
 
-        $handle = $DB->insert_record_raw('table', array('name' => 'blah'));
+        $handle = $DB->insert_record_raw('test_table', array('name' => 'blah'));
         $this->assertEquals('test_rw', $handle);
         $this->assertEquals(0, $DB->perf_get_reads_slave());
 
-        sleep(1);
-        $handle = $DB->get_records('table');
+        $handle = $DB->get_records('test_table');
         $this->assertEquals('test_rw', $handle);
         $this->assertEquals(0, $DB->perf_get_reads_slave());
 
-        $handle = $DB->get_records('table2');
+        $handle = $DB->get_records('test_table2');
         $this->assertStringStartsWith('test_ro', $handle);
         $this->assertEquals(1, $DB->perf_get_reads_slave());
 
-        $handle = $DB->get_records_sql("SELECT * FROM {table2} JOIN {table}");
+        $handle = $DB->get_records_sql("SELECT * FROM {test_table2} JOIN {test_table}");
         $this->assertEquals('test_rw', $handle);
         $this->assertEquals(1, $DB->perf_get_reads_slave());
     }
 
-    public function test_read_temptable() {
-        $DB = $this->new_db();
-        $DB->add_temptable('temptable1');
-
-        $this->assertEquals(0, $DB->perf_get_reads_slave());
-        $this->assertNull($DB->get_dbhwrite());
-
-        $handle = $DB->get_records('temptable1');
-        $this->assertEquals('test_rw', $handle);
-        $this->assertEquals(0, $DB->perf_get_reads_slave());
-
-        $DB->delete_temptable('temptable1');
-    }
-
-    public function test_read_excluded_tables() {
+    public function test_transaction_commit() {
         $DB = $this->new_db();
 
-        $this->assertEquals(0, $DB->perf_get_reads_slave());
-        $this->assertNull($DB->get_dbhwrite());
-
-        $handle = $DB->get_records('exclude');
-        $this->assertEquals('test_rw', $handle);
-        $this->assertEquals(0, $DB->perf_get_reads_slave());
-    }
-
-    public function test_transaction() {
-        $DB = $this->new_db();
-
-        $this->assertNull($DB->get_dbhwrite());
-
+        $DB->txn_handle = null;
         $transaction = $DB->start_delegated_transaction();
-        $handle = $DB->get_records_sql("SELECT * FROM {table}");
-        $this->assertEquals('test_rw', $handle);
+        $this->assertEquals('test_rw', $DB->txn_handle);
+
+        $DB->txn_handle = null;
+        $transaction->allow_commit();
+        $this->assertEquals('test_rw', $DB->txn_handle);
+    }
+
+    public function test_transaction_rollback() {
+        $DB = $this->new_db();
+
+        $DB->txn_handle = null;
+        $transaction = $DB->start_delegated_transaction();
+        $this->assertEquals('test_rw', $DB->txn_handle);
+
+        $DB->txn_handle = null;
+        try {
+            $transaction->rollback(new Exception("Dummy"));
+        } catch (Exception $e) {
+        }
+        $this->assertEquals('test_rw', $DB->txn_handle);
     }
 }

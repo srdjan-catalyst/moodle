@@ -79,16 +79,12 @@ $CFG->dboptions = array(
                                 // set to zero if you are using pg_bouncer in
                                 // 'transaction' mode (it is fine in 'session'
                                 // mode).
-    // 'connectionretrydelay' => 1, // If datbase connection fails, retry in
-                                // connectionretrydelay seconds. Default 1.
-                                // Designed to mitigate transient network problems.
     // 'dbhost_readonly' => ['slave1.db', 'slave2.db'], // Set to read-only slave hosts, to get
                                 // safe reads from there instead of master node.
                                 // Needs a db driver that supports the feature.
-    // 'db_readonly_latency' => 0.5, // Set read-only slave sync latency, delay
-                                // after update when it is deemed safe to read from the dbhost_readonly.
-    // 'db_readonly_exclude_tables' => ['table1', 'table2'], // Tables to exclude
-                                // from read-only slave feature.
+    // 'connectionretrydelay' => 1, // If datbase connection fails, retry in
+                                // connectionretrydelay seconds. Default 1.
+                                // Designed to mitigate transient network problems.
 );
 
 

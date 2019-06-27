@@ -25,7 +25,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__.'/moodle_database.php');
-require_once(__DIR__.'/moodle_read_slave_trait.php');
 require_once(__DIR__.'/mysqli_native_moodle_recordset.php');
 require_once(__DIR__.'/mysqli_native_moodle_temptables.php');
 
@@ -37,7 +36,6 @@ require_once(__DIR__.'/mysqli_native_moodle_temptables.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class mysqli_native_moodle_database extends moodle_database {
-    use moodle_read_slave_trait;
 
     /** @var mysqli $mysqli */
     protected $mysqli = null;
@@ -148,24 +146,6 @@ class mysqli_native_moodle_database extends moodle_database {
     protected function get_dblibrary() {
         return 'native';
     }
-
-    /**
-     * Gets db handle currently used with queries
-     * @return resource
-     */
-    protected function db_handle() {
-        return $this->mysqli;
-    }
-
-    /**
-     * Sets db handle to be used with subsequent queries
-     * @param resource $dbh
-     * @return void
-     */
-    protected function set_db_handle($dbh) {
-        $this->mysqli = $dbh;
-    }
-
 
     /**
      * Returns the current MySQL db engine.
@@ -538,6 +518,7 @@ class mysqli_native_moodle_database extends moodle_database {
 
     /**
      * Connect to db
+     * Must be called before other methods.
      * @param string $dbhost The database host.
      * @param string $dbuser The database username.
      * @param string $dbpass The database username's password.
@@ -546,7 +527,7 @@ class mysqli_native_moodle_database extends moodle_database {
      * @param array $dboptions driver specific options
      * @return bool success
      */
-    public function _connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
+    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
         $driverstatus = $this->driver_installed();
 
         if ($driverstatus !== true) {

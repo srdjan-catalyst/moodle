@@ -19,7 +19,7 @@
  *
  * @package    core
  * @category   dml
- * @copyright  2018 Srdjan Janković, Catalyst IT
+ * @copyright  2018 Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -39,13 +39,6 @@ trait moodle_read_slave_trait {
     private $written = array();
     private $readexclude = array();
 
-    private $pdbhost;
-    private $pdbuser;
-    private $pdbpass;
-    private $pdbname;
-    private $pprefix;
-    private $pdboptions;
-
     /**
      * Gets db handle currently used with queries
      * @return resource
@@ -61,19 +54,6 @@ trait moodle_read_slave_trait {
 
     /**
      * Connect to db
-     * @param string $dbhost The database host.
-     * @param string $dbuser The database username.
-     * @param string $dbpass The database username's password.
-     * @param string $dbname The name of the database being connected to.
-     * @param mixed $prefix string means moodle db prefix, false used for external databases where prefix not used
-     * @param array $dboptions driver specific options
-     * @return bool true
-     * @throws dml_connection_exception if error
-     */
-    abstract protected function _connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null);
-
-    /**
-     * Connect to db
      * Must be called before other methods.
      * @param string $dbhost The database host.
      * @param string $dbuser The database username.
@@ -84,28 +64,29 @@ trait moodle_read_slave_trait {
      * @return bool true
      * @throws dml_connection_exception if error
      */
-    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions=null) {
-        $this->pdbhost = $dbhost;
-        $this->pdbuser = $dbuser;
-        $this->pdbpass = $dbpass;
-        $this->pdbname = $dbname;
-        $this->pprefix = $prefix;
-        $this->pdboptions = $dboptions;
-
+    public function connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, array $dboptions = null) {
         if ($dboptions) {
             if (isset($dboptions['dbhost_readonly'])) {
                 $ro = $dboptions['dbhost_readonly'];
-                if (!is_array($ro)) {
-                    $ro = [$ro];
-                }
-                foreach ($ro as $ro1) {
-                    try {
-                        $this->_connect($ro1, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
-                        $this->dbhreadonly = $this->db_handle();
-                    } catch (dml_connection_exception $e) {
-                        continue;
+                if (is_array($ro)) {
+                    /* A random-ish read-only server */
+                    switch ($cnt = count($ro)) {
+                        case 0:
+                            unset($ro);
+                            break;
+                        case 1:
+                            $ro1 = $ro = $ro[0];
+                            break;
+                        default:
+                            $idx = rand(0, $cnt - 1);
+                            $ro1 = $ro[$idx];
                     }
-
+                }
+            }
+            if (isset($ro1)) {
+                try {
+                    parent::connect($ro1, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
+                    $this->dbhreadonly = $this->db_handle();
                     if (isset($dboptions['db_readonly_latency'])) {
                         $this->slavelatency = $dboptions['db_readonly_latency'];
                     }
@@ -115,24 +96,28 @@ trait moodle_read_slave_trait {
                             throw new configuration_exception('db_readonly_exclude_tables must be an array');
                         }
                     }
-                    break;
+                } catch (dml_connection_exception $e) {
+                    error_log("$e");
+
+                    if (is_array($ro)) {
+                        foreach ($ro as $ro2) {
+                            if ($ro2 == $ro1) {
+                                continue;
+                            }
+                            try {
+                                parent::connect($ro2, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
+                                $this->dbhreadonly = $this->db_handle();
+                                break;
+                            } catch (dml_connection_exception $e) {
+                            }
+                        }
+                    }
                 }
             }
         }
-        if (!$this->dbhreadonly) {
-            $this->set_dbhwrite();
-        }
 
-        return true;
-    }
-
-    private function set_dbhwrite() {
-        // Late connect to read/write master if needed.
-        if (!$this->dbhwrite) {
-            $this->_connect($this->pdbhost, $this->pdbuser, $this->pdbpass, $this->pdbname, $this->pprefix, $this->pdboptions);
-            $this->dbhwrite = $this->db_handle();
-        }
-        $this->set_db_handle($this->dbhwrite);
+        parent::connect($dbhost, $dbuser, $dbpass, $dbname, $prefix, $dboptions);
+        $this->dbhwrite = $this->db_handle();
     }
 
     /**
@@ -144,44 +129,21 @@ trait moodle_read_slave_trait {
     }
 
     /**
-     * On DBs that support it, switch to transaction mode and begin a transaction
-     * @return moodle_transaction
-     */
-    public function start_delegated_transaction() {
-        $this->set_dbhwrite();
-        return parent::start_delegated_transaction();
-    }
-
-    /**
      * Called before each db query.
      * @param string $sql
-     * @param array array of parameters
+     * @param array $params
      * @param int $type type of query
      * @param mixed $extrainfo driver specific extra information
      * @return void
      */
     protected function query_start($sql, array $params=null, $type, $extrainfo=null) {
+        $this->_query_start($sql, $params, $type, $extrainfo);
+    }
+
+    protected function _query_start($sql, array $params=null, $type, $extrainfo=null) {
         parent::query_start($sql, $params, $type, $extrainfo);
-        $this->select_db_handle($type, $sql);
-    }
 
-    /**
-     * query_start addition, to be called after standard processing
-     * @param int $type type of query
-     * @param string $sql
-     * @return void
-     */
-    protected function select_db_handle($type, $sql) {
-        if ($this->dbhreadonly && $this->_query_is_ro($type, $sql)) {
-                $this->readsslave++;
-                $this->set_db_handle($this->dbhreadonly);
-                return;
-        }
-        $this->set_dbhwrite();
-    }
-
-    private function _query_is_ro($type, $sql) {
-        if ($this->transactions) {
+        if (!$this->dbhreadonly) {
             return;
         }
 
@@ -189,37 +151,40 @@ trait moodle_read_slave_trait {
             return;
         }
 
-        // lock_db queries always go to master.
+        // lock_db queries always go to master
         if (preg_match('/lock_db\b/', $sql)) {
             return;
         }
 
-        // Transactions are done as AUX, we cannot play with that.
+        # Transactions are done as AUX, we cannot play with that
         switch ($type) {
             case SQL_QUERY_SELECT:
                 $now = null;
                 foreach ($this->table_names($sql) as $t) {
                     if (in_array($t, $this->readexclude)) {
-                        return;
+                        break 2;
                     }
 
                     if ($this->temptables->is_temptable($t)) {
-                        return;
+                        break 2;
                     }
 
                     if (isset($this->written[$t])) {
                         if ($this->slavelatency) {
                             $now = $now ?: microtime(true);
                             if ($now - $this->written[$t] < $this->slavelatency) {
-                                return;
+                                break 2;
                             }
-                        } else {
-                            return;
+                        }
+                        else {
+                            break 2;
                         }
                     }
                 }
 
-                return true;
+                $this->readsslave++;
+                $this->set_db_handle($this->dbhreadonly);
+                break;
             case SQL_QUERY_INSERT:
             case SQL_QUERY_UPDATE:
             case SQL_QUERY_STRUCTURE:
@@ -227,17 +192,28 @@ trait moodle_read_slave_trait {
                 foreach ($this->table_names($sql) as $t) {
                     $this->written[$t] = $now;
                 }
-                return;
+                break;
         }
     }
 
-    /**
-     * Parce table names from query
-     * @param string $sql
-     * @return array
-     */
     protected function table_names($sql) {
         preg_match_all('/\b'.$this->prefix.'([a-z][A-Za-z0-9_]*)/', $sql, $match);
         return $match[1];
+    }
+
+    /**
+     * Called immediately after each db query.
+     * @param mixed $result db specific
+     * @return void
+     */
+    protected function query_end($result) {
+        $this->_query_end($result);
+    }
+
+    protected function _query_end($result) {
+        if ($this->dbhwrite) { // Sometimes handlers do queries from connect()
+            $this->set_db_handle($this->dbhwrite);
+        }
+        parent::query_end($result);
     }
 }

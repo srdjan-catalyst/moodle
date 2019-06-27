@@ -114,7 +114,7 @@ abstract class moodle_database {
     protected $used_for_db_sessions = false;
 
     /** @var array Array containing open transactions. */
-    protected $transactions = array();
+    private $transactions = array();
     /** @var bool Flag used to force rollback of all current transactions. */
     private $force_rollback = false;
 
