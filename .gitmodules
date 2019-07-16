@@ -43,7 +43,6 @@
 	path = local/aws
 	url = https://github.com/catalyst/moodle-local_aws.git
 [submodule "local/boostnavigation"]
-	autoupdate = merge
   branch = master
   path = local/boostnavigation
 	url = git@github.com:moodleuulm/moodle-local_boostnavigation.git
