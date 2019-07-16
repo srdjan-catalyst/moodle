@@ -61,3 +61,8 @@
 	path = admin/tool/objectfs
 	url = git@github.com:catalyst/moodle-tool_objectfs.git
 	branch = master
+[submodule "files/converter/librelambda"]
+	autoupdate = merge
+  branch = master
+  path = files/converter/librelambda
+	url = git@github.com:catalyst/moodle-fileconverter_librelambda.git
