@@ -14,6 +14,7 @@
     url = git@github.com:catalyst/moodle-auth_outage.git
     branch = master
 [submodule "lib/editor/atto/plugins/htmlplus"]
+    autoupdate = merge
     path = lib/editor/atto/plugins/htmlplus
     url = git@github.com:andrewnicols/moodle-atto_htmlplus.git
     branch = master
@@ -27,6 +28,7 @@
     url = https://github.com/catalyst/moodle-local_aws
     branch = master
 [submodule "local/boostnavigation"]
+    autoupdate = merge
     path = local/boostnavigation
     url = git@github.com:moodleuulm/moodle-local_boostnavigation.git
     branch = master
@@ -41,6 +43,7 @@
     url = git@github.com:catalyst/moodle-local_envbar.git
     branch = master
 [submodule "report/benchmark"]
+    autoupdate = merge
     path = report/benchmark
     url = git@github.com:mikasmart/benchmark.git
     branch = master
