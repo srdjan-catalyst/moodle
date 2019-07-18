@@ -7,7 +7,7 @@
 	autoupdate = merge
 	path = auth/catalyst
 	url = git@git.catalyst-au.net:elearning/mdl-auth_catalyst.git
-	branch = master
+	branch = STABLE_33
 [submodule "auth/outage"]
   autoupdate = merge
   path = auth/outage
