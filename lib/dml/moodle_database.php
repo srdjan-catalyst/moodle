@@ -114,7 +114,7 @@ abstract class moodle_database {
     protected $used_for_db_sessions = false;
 
     /** @var array Array containing open transactions. */
-    protected $transactions = array();
+    private $transactions = array();
     /** @var bool Flag used to force rollback of all current transactions. */
     private $force_rollback = false;
 
@@ -2662,14 +2662,6 @@ abstract class moodle_database {
      */
     public function perf_get_reads() {
         return $this->reads;
-    }
-
-    /**
-     * Returns whether we want to connect to slave database for read queries.
-     * @return bool Want read only connection
-     */
-    public function want_read_slave() {
-        return false;
     }
 
     /**

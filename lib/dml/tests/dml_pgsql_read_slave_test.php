@@ -19,13 +19,13 @@
  *
  * @package    core
  * @category   dml
- * @copyright  2018 Srdjan Janković, Catalyst IT
+ * @copyright  2018 Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__.'/../pgsql_native_moodle_database.php');
+require_once(__DIR__.'/../pgsql_read_slave_native_moodle_database.php');
 require_once(__DIR__.'/../moodle_temptables.php');
 
 /**
@@ -36,17 +36,9 @@ require_once(__DIR__.'/../moodle_temptables.php');
  * @copyright  2018 Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class read_slave_moodle_database_mock extends pgsql_native_moodle_database {
-    /**
-     * @var string
-     */
+class read_slave_moodle_database_mock extends pgsql_read_slave_native_moodle_database {
     protected $prefix = 't_';
 
-    /**
-     * Constructs a mock db driver
-     *
-     * @param bool $external
-     */
     public function __construct($external=false) {
         parent::__construct($external);
 
@@ -57,44 +49,24 @@ class read_slave_moodle_database_mock extends pgsql_native_moodle_database {
         $this->temptables = new moodle_temptables($this);
     }
 
-    // @codingStandardsIgnoreStart
-    /**
-     * Upgrade to public
-     * @return resource
-     */
     public function db_handle() {
         return parent::db_handle();
     }
 
-    /**
-     * Upgrade to public
-     * @param string $sql
-     * @param array $params
-     * @param int $type
-     * @param array $extrainfo
-     */
     public function query_start($sql, array $params=null, $type, $extrainfo=null) {
         return parent::query_start($sql, $params, $type);
     }
 
-    /**
-     * Upgrade to public
-     * @param mixed $result
-     */
     public function query_end($result) {
         $this->set_db_handle($this->dbhwrite);
     }
 
-    /**
-     * Upgrade to public
-     */
     public function dispose() {
     }
-    // @codingStandardsIgnoreEnd
 }
 
 /**
- * DML pgsql_native_moodle_database read slave specific tests
+ * DML pgsql_read_slave_native_moodle_database specific tests
  *
  * @package    core
  * @category   dml
@@ -145,39 +117,9 @@ class core_dml_pgsql_read_slave_testcase extends base_testcase {
 
         $this->assertEquals(0, $DB->perf_get_reads_slave());
 
-        $DB->query_start('SELECT pg_whatever(1)', null, SQL_QUERY_SELECT);
-        $this->assertEquals('test_ro', $DB->db_handle());
+        $DB->query_start('SELECT * FROM pg_whatever', null, SQL_QUERY_SELECT);
+        $this->assertEquals('test_rw', $DB->db_handle());
         $DB->query_end(null);
-        $this->assertEquals(1, $DB->perf_get_reads_slave());
-    }
-
-    public function test_read_pg_lock_table() {
-        $DB = new read_slave_moodle_database_mock();
-
         $this->assertEquals(0, $DB->perf_get_reads_slave());
-
-        foreach (['pg_try_advisory_lock', 'pg_advisory_unlock'] as $fn) {
-            $DB->query_start("SELECT $fn(1)", null, SQL_QUERY_SELECT);
-            $this->assertEquals('test_rw', $DB->db_handle());
-            $DB->query_end(null);
-            $this->assertEquals(0, $DB->perf_get_reads_slave());
-        }
-    }
-
-    public function test_temp_table() {
-        $DB = new read_slave_moodle_database_mock();
-
-        $this->assertEquals(0, $DB->perf_get_reads_slave());
-
-        $dbman = $DB->get_manager();
-        $table = new xmldb_table('silly_test_table');
-        $table->add_field('id', XMLDB_TYPE_INTEGER, 10, null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
-        $table->add_field('msg', XMLDB_TYPE_CHAR, 255);
-        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
-        $dbman->create_temp_table($table);
-
-        $DB->get_columns('silly_test_table');
-        $DB->get_records('silly_test_table');
-        $this->assertEquals(2, $DB->perf_get_reads_slave());
     }
 }

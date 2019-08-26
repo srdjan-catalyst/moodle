@@ -39,7 +39,6 @@ require_once(__DIR__.'/../../../ddl/sql_generator.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class test_sql_generator extends sql_generator {
-    // @codingStandardsIgnoreStart
     /**
      * Reset a sequence to the id field of a table.
      *
@@ -47,85 +46,72 @@ class test_sql_generator extends sql_generator {
      * @return array of sql statements
      */
     public function getResetSequenceSQL($table) {
-    // @codingStandardsIgnoreEnd
-        return [];
+        return array();
     }
 
-    // @codingStandardsIgnoreStart
     /**
      * Given one correct xmldb_table, returns the SQL statements
      * to create temporary table (inside one array).
      *
-     * @param xmldb_table $xmldbtable The xmldb_table object instance.
+     * @param xmldb_table $xmldb_table The xmldb_table object instance.
      * @return array of sql statements
      */
-    public function getCreateTempTableSQL($xmldbtable) {
-    // @codingStandardsIgnoreEnd
-        return [];
+    public function getCreateTempTableSQL($xmldb_table) {
+        return array();
     }
 
-    // @codingStandardsIgnoreStart
     /**
      * Given one XMLDB Type, length and decimals, returns the DB proper SQL type.
      *
-     * @param int $xmldbtype The xmldb_type defined constant. XMLDB_TYPE_INTEGER and other XMLDB_TYPE_* constants.
-     * @param int $xmldblength The length of that data type.
-     * @param int $xmldbdecimals The decimal places of precision of the data type.
+     * @param int $xmldb_type The xmldb_type defined constant. XMLDB_TYPE_INTEGER and other XMLDB_TYPE_* constants.
+     * @param int $xmldb_length The length of that data type.
+     * @param int $xmldb_decimals The decimal places of precision of the data type.
      * @return string The DB defined data type.
      */
-    public function getTypeSQL($xmldbtype, $xmldblength=null, $xmldbdecimals=null) {
-    // @codingStandardsIgnoreEnd
+    public function getTypeSQL($xmldb_type, $xmldb_length=null, $xmldb_decimals=null) {
         return '';
     }
 
-    // @codingStandardsIgnoreStart
     /**
      * Returns the code (array of statements) needed to add one comment to the table.
      *
-     * @param xmldb_table $xmldbtable The xmldb_table object instance.
+     * @param xmldb_table $xmldb_table The xmldb_table object instance.
      * @return array Array of SQL statements to add one comment to the table.
      */
-    function getCommentSQL ($xmldbtable) {
-    // @codingStandardsIgnoreEnd
-        return [];
+    function getCommentSQL ($xmldb_table) {
+        return array();
     }
 
-    // @codingStandardsIgnoreStart
     /**
      * Given one xmldb_table and one xmldb_field, return the SQL statements needed to add its default
      * (usually invoked from getModifyDefaultSQL()
      *
-     * @param xmldb_table $xmldbtable The xmldb_table object instance.
-     * @param xmldb_field $xmldbfield The xmldb_field object instance.
+     * @param xmldb_table $xmldb_table The xmldb_table object instance.
+     * @param xmldb_field $xmldb_field The xmldb_field object instance.
      * @return array Array of SQL statements to create a field's default.
      */
-    public function getCreateDefaultSQL($xmldbtable, $xmldbfield) {
-    // @codingStandardsIgnoreEnd
-        return [];
+    public function getCreateDefaultSQL($xmldb_table, $xmldb_field) {
+        return array();
     }
 
-    // @codingStandardsIgnoreStart
     /**
      * Given one xmldb_table and one xmldb_field, return the SQL statements needed to drop its default
      * (usually invoked from getModifyDefaultSQL()
      *
-     * @param xmldb_table $xmldbtable The xmldb_table object instance.
-     * @param xmldb_field $xmldbfield The xmldb_field object instance.
+     * @param xmldb_table $xmldb_table The xmldb_table object instance.
+     * @param xmldb_field $xmldb_field The xmldb_field object instance.
      * @return array Array of SQL statements to create a field's default.
      */
-    public function getDropDefaultSQL($xmldbtable, $xmldbfield) {
-    // @codingStandardsIgnoreEnd
-        return [];
+    public function getDropDefaultSQL($xmldb_table, $xmldb_field) {
+        return array();
     }
 
-    // @codingStandardsIgnoreStart
     /**
      * Returns an array of reserved words (lowercase) for this DB
      * @return array An array of database specific reserved words
      */
     public static function getReservedWords() {
-    // @codingStandardsIgnoreEnd
-        return [];
+        return array();
     }
 
 }
@@ -142,9 +128,6 @@ abstract class test_moodle_database extends moodle_database {
 
     /** @var string */
     private $error;
-
-    /** @var array */
-    private $_tables = [];
 
     /**
      * Constructor - Instantiates the database
@@ -209,7 +192,7 @@ abstract class test_moodle_database extends moodle_database {
      * @return array
      */
     public function get_server_info() {
-        return ['description' => $this->name(), 'version' => '0'];
+        return array('description'=>$this->name(), 'version'=>'0');
     }
 
     /**
@@ -229,15 +212,6 @@ abstract class test_moodle_database extends moodle_database {
     }
 
     /**
-     * Sets tables property
-     * @param array $tables
-     * @return void
-     */
-    public function set_tables($tables) {
-        $this->_tables = $tables;
-    }
-
-    /**
      * Returns keys of tables property
      * @param bool $usecache
      * @return array $tablenames
@@ -252,7 +226,7 @@ abstract class test_moodle_database extends moodle_database {
      * @return array $indexes
      */
     public function get_indexes($table) {
-        return isset($this->_tables[$table]['indexes']) ? $this->_tables[$table]['indexes'] : [];
+        return isset($this->_tables[$table]['indexes']) ? $this->_tables[$table]['indexes'] : array();
     }
 
     /**
@@ -437,7 +411,7 @@ abstract class test_moodle_database extends moodle_database {
      * @return string $sql
      * @throws Exception
      */
-    public function sql_concat_join($separator="' '", $elements=[]) {
+    public function sql_concat_join($separator="' '", $elements=array()) {
         throw new Exception("sql_concat_join() not implemented");
     }
 
