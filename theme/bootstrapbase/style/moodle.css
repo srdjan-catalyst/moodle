@@ -16009,6 +16009,9 @@ sub {
 .dropdown-backdrop {
   position: static;
 }
+.pagination ul > li.hidden {
+  display: none;
+}
 /* some very targetted corrections to roll back nameclashes between
  * Moodle and Bootstrap like .row, .label, .content, .controls
  *
@@ -21411,6 +21414,9 @@ span[data-flexitour="container"][x-placement="right-start"] div[data-role="arrow
     margin-right: 0;
     padding-right: 0;
   }
+}
+#page-mod-forum-discuss select[name="mode"] {
+  margin-bottom: 10px;
 }
 @media (max-width: 768px) {
   .fp-forminset .control-group .controls {
