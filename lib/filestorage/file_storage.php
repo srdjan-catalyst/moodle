@@ -1832,6 +1832,15 @@ class file_storage {
     }
 
     /**
+     * Returns true if filesystem is configured to support xsendfile.
+     *
+     * @return bool
+     */
+    public function supports_xsendfile() {
+        return $this->filesystem->supports_xsendfile();
+    }
+
+    /**
      * Content exists
      *
      * @param string $contenthash
