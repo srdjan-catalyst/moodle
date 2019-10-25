@@ -9882,6 +9882,13 @@ body.path-question-type .fitem_fgroup .accesshide {
 #page-mod-quiz-edit div.questionbank .categoryinfo {
   padding: 0.3em 0;
 }
+.questionbankwindow .boxaligncenter.categoryinfo {
+  padding-left: 0;
+}
+.questionbankwindow .singlebutton div,
+.questionbankwindow .singlebutton div input {
+  margin-left: 0;
+}
 #page-mod-quiz-edit div.questionbank .modulespecificbuttonscontainer {
   padding: 0;
 }
@@ -9906,6 +9913,9 @@ body.path-question-type .fitem_fgroup .accesshide {
 }
 .questionbankwindow .module {
   width: auto;
+}
+.questionbankwindow .form-autocomplete-selection {
+  margin-left: 0;
 }
 #page-mod-quiz-edit div.editq div.question div.content {
   background-color: #fff;
@@ -17153,7 +17163,7 @@ select.form-autocomplete-original-select {
   margin: 0.2em;
   min-height: 27px;
 }
-.form-autocomplete-multiple [role=listitem] {
+.form-autocomplete-selection [role=listitem] {
   cursor: pointer;
   white-space: inherit;
   word-break: break-word;
