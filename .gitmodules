@@ -1,69 +1,68 @@
-
 [submodule "admin/tool/heartbeat"]
-	autoupdate = merge
-	branch = master
-	path = admin/tool/heartbeat
-	url = git@github.com:catalyst/moodle-tool_heartbeat.git
-[submodule "admin/tool/webanalytics"]
-  autoupdate = merge
-  path = admin/tool/webanalytics
-  url = git@github.com:catalyst/moodle-tool_webanalytics.git
-  branch = master
-[submodule "auth/catalyst"]
-	autoupdate = merge
-	branch = STABLE_33
-	path = auth/catalyst
-	url = git@git.catalyst-au.net:elearning/mdl-auth_catalyst.git
-[submodule "lib/editor/atto/plugins/preview"]
-	branch = master
-	path = lib/editor/atto/plugins/preview
-	url = git@github.com:dthies/moodle-atto_preview.git
-[submodule "local/datacleaner"]
-	autoupdate = merge
-	branch = master
-	path = local/datacleaner
-	url = git@github.com:catalyst/moodle-local_datacleaner.git
-[submodule "local/envbar"]
-	autoupdate = merge
-	branch = master
-	path = local/envbar
-	url = git@github.com:catalyst/moodle-local_envbar.git
-[submodule "report/benchmark"]
-	autoupdate = merge
-  branch = master
-	path = report/benchmark
-	url = git@github.com:mikasmart/benchmark.git
+    autoupdate = merge
+    branch = master
+    path = admin/tool/heartbeat
+    url = git@github.com:catalyst/moodle-tool_heartbeat.git
 [submodule "admin/tool/objectfs"]
-	autoupdate = merge
-	branch = master
-	path = admin/tool/objectfs
-	url = git@github.com:catalyst/moodle-tool_objectfs.git
-[submodule "local/aws"]
-  autoupdate = merge
-  branch = master
-	path = local/aws
-	url = https://github.com/catalyst/moodle-local_aws.git
-[submodule "local/boostnavigation"]
-  branch = master
-  path = local/boostnavigation
-	url = git@github.com:moodleuulm/moodle-local_boostnavigation.git
-[submodule "lib/editor/atto/plugins/htmlplus"]
-	autoupdate = merge
-  branch = master
-  path = lib/editor/atto/plugins/htmlplus
-	url = git@github.com:andrewnicols/moodle-atto_htmlplus.git
-[submodule "search/engine/elastic"]
-  autoupdate = merge
-	branch = master
-  path = search/engine/elastic
-	url = git@github.com:catalyst/moodle-search_elastic.git
+    autoupdate = merge
+    branch = master
+    path = admin/tool/objectfs
+    url = git@github.com:catalyst/moodle-tool_objectfs.git
+[submodule "admin/tool/webanalytics"]
+    autoupdate = merge
+    branch = master
+    path = admin/tool/webanalytics
+    url = git@github.com:catalyst/moodle-tool_webanalytics.git
+[submodule "auth/catalyst"]
+    autoupdate = merge
+    branch = STABLE_33
+    path = auth/catalyst
+    url = git@git.catalyst-au.net:elearning/mdl-auth_catalyst.git
 [submodule "auth/outage"]
-	autoupdate = merge
-  branch = master
-  path = auth/outage
-	url = git@github.com:catalyst/moodle-auth_outage.git
+    autoupdate = merge
+    branch = master
+    path = auth/outage
+    url = git@github.com:catalyst/moodle-auth_outage.git
 [submodule "files/converter/librelambda"]
-  autoupdate = merge
-	branch = master
-  path = files/converter/librelambda
-	url = git@github.com:catalyst/moodle-fileconverter_librelambda.git
+    autoupdate = merge
+    branch = master
+    path = files/converter/librelambda
+    url = git@github.com:catalyst/moodle-fileconverter_librelambda.git
+[submodule "lib/editor/atto/plugins/htmlplus"]
+    autoupdate = merge
+    branch = master
+    path = lib/editor/atto/plugins/htmlplus
+    url = git@github.com:andrewnicols/moodle-atto_htmlplus.git
+[submodule "lib/editor/atto/plugins/preview"]
+    branch = master
+    path = lib/editor/atto/plugins/preview
+    url = git@github.com:dthies/moodle-atto_preview.git
+[submodule "local/aws"]
+    autoupdate = merge
+    branch = master
+    path = local/aws
+    url = https://github.com/catalyst/moodle-local_aws.git
+[submodule "local/boostnavigation"]
+    branch = master
+    path = local/boostnavigation
+    url = git@github.com:moodleuulm/moodle-local_boostnavigation.git
+[submodule "local/datacleaner"]
+    autoupdate = merge
+    branch = master
+    path = local/datacleaner
+    url = git@github.com:catalyst/moodle-local_datacleaner.git
+[submodule "local/envbar"]
+    autoupdate = merge
+    branch = master
+    path = local/envbar
+    url = git@github.com:catalyst/moodle-local_envbar.git
+[submodule "report/benchmark"]
+    autoupdate = merge
+    branch = master
+    path = report/benchmark
+    url = git@github.com:mikasmart/benchmark.git
+[submodule "search/engine/elastic"]
+    autoupdate = merge
+    branch = master
+    path = search/engine/elastic
+    url = git@github.com:catalyst/moodle-search_elastic.git
