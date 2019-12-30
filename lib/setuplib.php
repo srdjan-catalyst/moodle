@@ -354,6 +354,9 @@ function default_exception_handler($ex) {
         $logerrmsg = "Default exception handler: ".$info->message.' Debug: '.$info->debuginfo."\n".format_backtrace($info->backtrace, true);
         error_log($logerrmsg);
     }
+    // If we already tried to send the header remove it, the content length
+    // should be either empty or the length of the error page.
+    @header_remove('Content-Length');
 
     if (is_early_init($info->backtrace)) {
         echo bootstrap_renderer::early_error($info->message, $info->moreinfourl, $info->link, $info->backtrace, $info->debuginfo, $info->errorcode);
