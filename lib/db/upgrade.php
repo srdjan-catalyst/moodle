@@ -2467,7 +2467,7 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2018051705.04);
     }
 
-    if ($oldversion < 2018051710.04) {
+    if ($oldversion < 2018051711.02) {
         // Define field and index to be added to backup_controllers.
         $table = new xmldb_table('backup_controllers');
         $field = new xmldb_field('progress', XMLDB_TYPE_NUMBER, '15, 14', null, XMLDB_NOTNULL, null, '0', 'timemodified');
@@ -2482,7 +2482,7 @@ function xmldb_main_upgrade($oldversion) {
         }
 
         // Main savepoint reached.
-        upgrade_main_savepoint(true, 2018051710.04);
+        upgrade_main_savepoint(true, 2018051711.02);
     }
 
     return true;
