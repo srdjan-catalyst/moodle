@@ -1185,6 +1185,7 @@ $string['messagedselectedusers'] = 'Selected users have been messaged and the re
 $string['messagedselecteduserfailed'] = 'The message was not sent to user {$a->fullname}.';
 $string['messagedselectedusersfailed'] = 'Something went wrong while messaging selected users.  Some may have received the email.';
 $string['messagedselectedcountusersfailed'] = 'A problem occurred and {$a} messages have not been sent.';
+$string['messageprovider:asyncbackupnotification'] = 'Asynchronous backup/restore notifications';
 $string['messageprovider:availableupdate'] = 'Available update notifications';
 $string['messageprovider:backup'] = 'Backup notifications';
 $string['messageprovider:badgecreatornotice'] = 'Badge creator notifications';
