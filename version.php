@@ -33,7 +33,7 @@ $version  = 2018051711.02;              // 20180517      = branching date YYYYMM
                                         //         RR    = release increments - 00 in DEV branches.
                                         //           .XX = incremental changes.
 
-$release  = '3.5.11+ (Build: 20200312)'; // Human-friendly version name
+$release  = '3.5.11+ (Build: 20200402)'; // Human-friendly version name
 
 $branch   = '35';                       // This version's branch.
 $maturity = MATURITY_STABLE;             // This version's maturity level.
