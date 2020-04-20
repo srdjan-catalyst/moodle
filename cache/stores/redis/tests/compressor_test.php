@@ -315,45 +315,82 @@ class cachestore_redis_compressor_test extends advanced_testcase {
         if (!class_exists('Redis')) {
             return [];
         }
+    }
 
+    /*
+     * Provider for set/get combination tests.
+     *
+     * @return array
+     */
+    public function provider_for_tests_setget() {
         $data = [
-            ['none', Redis::SERIALIZER_NONE, gzencode('value1'), gzencode('value2')],
-            ['php', Redis::SERIALIZER_PHP, gzencode(serialize('value1')), gzencode(serialize('value2'))],
+            ['none, none',
+                Redis::SERIALIZER_NONE, cachestore_redis::COMPRESSOR_NONE,
+                'value1', 'value2'],
+            ['none, gzip',
+                Redis::SERIALIZER_NONE, cachestore_redis::COMPRESSOR_PHP_GZIP,
+                gzencode('value1'), gzencode('value2')],
+            ['php, none',
+                Redis::SERIALIZER_PHP, cachestore_redis::COMPRESSOR_NONE,
+                serialize('value1'), serialize('value2')],
+            ['php, gzip',
+                Redis::SERIALIZER_PHP, cachestore_redis::COMPRESSOR_PHP_GZIP,
+                gzencode(serialize('value1')), gzencode(serialize('value2'))],
         ];
-
         if (defined('Redis::SERIALIZER_IGBINARY')) {
             $data[] = [
-                'igbinary',
-                Redis::SERIALIZER_IGBINARY,
-                gzencode(igbinary_serialize('value1')),
-                gzencode(igbinary_serialize('value2')),
+                'igbinary, none',
+                    Redis::SERIALIZER_IGBINARY, cachestore_redis::COMPRESSOR_NONE,
+                    igbinary_serialize('value1'), igbinary_serialize('value2'),
             ];
+            $data[] = [
+                'igbinary, gzip',
+                    Redis::SERIALIZER_IGBINARY, cachestore_redis::COMPRESSOR_PHP_GZIP,
+                    gzencode(igbinary_serialize('value1')), gzencode(igbinary_serialize('value2')),
+            ];
+        }
+
+        if (extension_loaded('zstd')) {
+            $data[] = [
+                'none, zstd',
+                Redis::SERIALIZER_NONE, cachestore_redis::COMPRESSOR_PHP_ZSTD,
+                zstd_compress('value1'), zstd_compress('value2'),
+            ];
+            $data[] = [
+                'php, zstd',
+                Redis::SERIALIZER_PHP, cachestore_redis::COMPRESSOR_PHP_ZSTD,
+                zstd_compress(serialize('value1')), zstd_compress(serialize('value2')),
+            ];
+
+            if (defined('Redis::SERIALIZER_IGBINARY')) {
+                $data[] = [
+                    'igbinary, zstd',
+                    Redis::SERIALIZER_IGBINARY, cachestore_redis::COMPRESSOR_PHP_ZSTD,
+                    zstd_compress(igbinary_serialize('value1')), zstd_compress(igbinary_serialize('value2')),
+                ];
+            }
         }
 
         return $data;
     }
 
     /**
-     * Test it can use  serializers with get and set.
+     * Test we can use get and set with all combinations.
      *
-     * @dataProvider provider_for_test_it_can_use_serializers
+     * @dataProvider provider_for_tests_setget
      * @param string $name
      * @param int $serializer
      * @param string $rawexpected1
      * @param string $rawexpected2
      */
-    public function test_it_can_use_serializers_getset($name, $serializer, $rawexpected1, $rawexpected2) {
-        if (is_null($this->store)) {
-            return; // Redis not enabled.
-        }
-
+    public function test_it_can_use_getset($name, $serializer, $compressor, $rawexpected1, $rawexpected2) {
         // Create a connection with the desired serialisation.
-        $store = $this->create_store(cachestore_redis::COMPRESSOR_PHP_GZIP, $serializer);
+        $store = $this->create_store($compressor, $serializer);
+        $store->set('key', 'value1');
 
         // Create a connection without serialisation or compressor to fetch raw data.
         $rawstore = $this->create_store(cachestore_redis::COMPRESSOR_NONE, Redis::SERIALIZER_NONE);
 
-        $store->set('key', 'value1');
         $data = $store->get('key');
         $rawdata = $rawstore->get('key');
         self::assertSame('value1', $data, "Invalid serialisation/unserialisation for: {$name}");
@@ -361,19 +398,15 @@ class cachestore_redis_compressor_test extends advanced_testcase {
     }
 
     /**
-     * Test it can use  serializers with get and set many.
+     * Test we can use get and set many with all combinations.
      *
-     * @dataProvider provider_for_test_it_can_use_serializers
+     * @dataProvider provider_for_tests_setget
      * @param string $name
      * @param int $serializer
      * @param string $rawexpected1
      * @param string $rawexpected2
      */
-    public function test_it_can_use_serializers_getsetmany($name, $serializer, $rawexpected1, $rawexpected2) {
-        if (is_null($this->store)) {
-            return; // Redis not enabled.
-        }
-
+    public function test_it_can_use_getsetmany($name, $serializer, $compressor, $rawexpected1, $rawexpected2) {
         $many = [
             ['key' => 'key1', 'value' => 'value1'],
             ['key' => 'key2', 'value' => 'value2'],
@@ -383,15 +416,14 @@ class cachestore_redis_compressor_test extends advanced_testcase {
         $rawexpectations = ['key1' => $rawexpected1, 'key2' => $rawexpected2];
 
         // Create a connection with the desired serialisation.
-        $store = $this->create_store(cachestore_redis::COMPRESSOR_PHP_GZIP, $serializer);
+        $store = $this->create_store($compressor, $serializer);
         $store->set_many($many);
 
-        // Create a connection without serialisation or compressor to fetch raw data.
+        // Disable compressor and serializer to check the actual stored value.
         $rawstore = $this->create_store(cachestore_redis::COMPRESSOR_NONE, Redis::SERIALIZER_NONE);
 
         $data = $store->get_many($keys);
         $rawdata = $rawstore->get_many($keys);
-
         foreach ($keys as $key) {
             self::assertSame($expectations[$key],
                              $data[$key],

@@ -30,6 +30,7 @@ $string['compressor_none'] = 'No compression.';
 $string['compressor_php_gzip'] = 'Use gzip compression.';
 $string['formerror_clusterserver'] = 'Invalid server [{$a->server}]. Correct format is: <i>address:port</i>';
 $string['formerror_singleserveronly'] = 'Only one server allowed if not cluster mode. Check for extra newlines.';
+$string['compressor_php_zstd'] = 'Use Zstandard compression.';
 $string['pluginname'] = 'Redis';
 $string['prefix'] = 'Key prefix';
 $string['prefix_help'] = 'This prefix is used for all key names on the Redis server.
