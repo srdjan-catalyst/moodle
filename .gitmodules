@@ -46,6 +46,10 @@
 	branch = master
 	path = local/boostnavigation
 	url = git@github.com:moodleuulm/moodle-local_boostnavigation.git
+[submodule "local/csp"]
+	branch = master
+	path = local/csp
+	url = git@github.com:catalyst/moodle-local_csp.git
 [submodule "local/datacleaner"]
 	autoupdate = merge
 	branch = master
