@@ -59,11 +59,11 @@ class core_dml_mysqli_read_slave_testcase extends base_testcase {
     }
 
     /**
-     * Test readonly connection failure with real mysqli connection
+     * Test readonly connection host failure with real mysqli connection
      *
      * @return void
      */
-    public function test_real_readslave_connect_fail() : void {
+    public function test_real_readslave_connect_fail_host() : void {
         global $DB;
 
         if ($DB->get_dbfamily() != 'mysql') {
@@ -77,6 +77,40 @@ class core_dml_mysqli_read_slave_testcase extends base_testcase {
         }
         $cfg->dboptions['readonly'] = [
             'instance' => ['host.that.is.not'],
+            'connecttimeout' => 1
+        ];
+
+        $db2 = moodle_database::get_driver_instance($cfg->dbtype, $cfg->dblibrary);
+        $db2->connect($cfg->dbhost, $cfg->dbuser, $cfg->dbpass, $cfg->dbname, $cfg->prefix, $cfg->dboptions);
+        $this->assertTrue(count($db2->get_records('user')) > 0);
+    }
+
+    /**
+     * Test readonly connection port failure with real mysqli connection
+     *
+     * @return void
+     */
+    public function test_real_readslave_connect_fail_port() : void {
+        global $DB;
+
+        if ($DB->get_dbfamily() != 'mysql') {
+            $this->markTestSkipped("Not mysql");
+        }
+
+        // Open second connection.
+        $cfg = $DB->export_dbconfig();
+        if (!isset($cfg->dboptions)) {
+            $cfg->dboptions = array();
+        }
+        for ($dbport = 10000; $dbport <= 10100; $dbport++) {
+            if ( $fp = @fsockopen($cfg->dbhost, $dbport, $errno, $errstr) ) {
+                fclose($fp);
+                continue;
+            }
+            break;
+        }
+        $cfg->dboptions['readonly'] = [
+            'instance' => ['dbhost' => $cfg->dbhost, 'dbport' => $dbport],
             'connecttimeout' => 1
         ];
 
