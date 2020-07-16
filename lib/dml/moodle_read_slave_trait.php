@@ -153,6 +153,7 @@ trait moodle_read_slave_trait {
         $this->pprefix = $prefix;
         $this->pdboptions = $dboptions;
 
+        $roconnfailed = false;
         if ($dboptions) {
             if (isset($dboptions['readonly'])) {
                 $this->wantreadslave = true;
@@ -195,15 +196,18 @@ trait moodle_read_slave_trait {
                     }
                     $dboptions['dbport'] = isset($slave['dbport']) ? $slave['dbport'] : $dbport;
 
-                    // @codingStandardsIgnoreStart
                     try {
                         $this->raw_connect($rodb['dbhost'], $rodb['dbuser'], $rodb['dbpass'], $dbname, $prefix, $dboptions);
                         $this->dbhreadonly = $this->get_db_handle();
+                        if ($roconnfailed) {
+                            debugging('Readonly db connection succeeded for host '. $rodb['dbhost']);
+                            $roconnfailed = false;
+                        }
                         break;
                     } catch (dml_connection_exception $e) {
-                        // If readonly slave is not connectable we'll have to do without it.
+                        debugging('Readonly db connection failed for host '. $rodb['dbhost']);
+                        $roconnfailed = true;
                     }
-                    // @codingStandardsIgnoreEnd
                 }
                 // ... lock_db queries always go to master.
                 // Since it is a lock and as such marshalls concurrent connections,
@@ -214,7 +218,15 @@ trait moodle_read_slave_trait {
             }
         }
         if (!$this->dbhreadonly) {
-            $this->set_dbhwrite();
+            try {
+                $this->set_dbhwrite();
+            } catch (dml_connection_exception $e) {
+                debugging('Readwrite db connection failed for host '. $this->pdbhost);
+                throw $e;
+            }
+            if ($roconnfailed) {
+                debugging('Readwrite db connection succeeded for host '. $this->pdbhost);
+            }
         }
 
         return true;
