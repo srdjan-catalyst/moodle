@@ -351,9 +351,7 @@ class pgsql_native_moodle_database extends moodle_database {
     public function get_server_info() {
         static $info;
         if (!$info) {
-            $this->query_start("--pg_version()", null, SQL_QUERY_AUX);
             $info = pg_version($this->pgsql);
-            $this->query_end(true);
         }
         return array('description'=>$info['server'], 'version'=>$info['server']);
     }
@@ -919,7 +917,7 @@ class pgsql_native_moodle_database extends moodle_database {
 
         $sql = 'FETCH ' . $count . ' FROM ' . $cursorname;
 
-        $this->query_start($sql, [], SQL_QUERY_AUX);
+        $this->query_start($sql, [], SQL_QUERY_SELECT);
         $result = pg_query($this->pgsql, $sql);
         $last = pg_num_rows($result) !== $count;
 
@@ -937,7 +935,7 @@ class pgsql_native_moodle_database extends moodle_database {
     public function close_cursor($cursorname) {
         // If the transaction got cancelled, then ignore this request.
         $sql = 'CLOSE ' . $cursorname;
-        $this->query_start($sql, [], SQL_QUERY_AUX);
+        $this->query_start($sql, [], SQL_QUERY_SELECT);
         $result = pg_query($this->pgsql, $sql);
         $this->query_end($result);
         if ($result) {

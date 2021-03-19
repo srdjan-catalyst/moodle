@@ -61,13 +61,25 @@ class core_dml_pgsql_read_slave_testcase extends base_testcase {
 
         // Read from the non-written to table cursor.
         $sql = 'FETCH 1 FROM crs1';
-        $DB->query_start($sql, null, SQL_QUERY_AUX);
+        $DB->query_start($sql, null, SQL_QUERY_SELECT);
         $this->assertEquals('test_ro', $DB->get_db_handle());
         $DB->query_end(null);
 
         // Read from the written to table cursor.
         $sql = 'FETCH 1 FROM crs2';
-        $DB->query_start($sql, null, SQL_QUERY_AUX);
+        $DB->query_start($sql, null, SQL_QUERY_SELECT);
+        $this->assertEquals('test_rw', $DB->get_db_handle());
+        $DB->query_end(null);
+
+        // Close the non-written to table cursor.
+        $sql = 'CLOSE crs1';
+        $DB->query_start($sql, [], SQL_QUERY_SELECT);
+        $this->assertEquals('test_ro', $DB->get_db_handle());
+        $DB->query_end(null);
+
+        // Close the written to table cursor.
+        $sql = 'CLOSE crs2';
+        $DB->query_start($sql, [], SQL_QUERY_SELECT);
         $this->assertEquals('test_rw', $DB->get_db_handle());
         $DB->query_end(null);
     }

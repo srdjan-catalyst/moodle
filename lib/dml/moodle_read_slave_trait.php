@@ -57,8 +57,8 @@ defined('MOODLE_INTERNAL') || die();
  *   in the $written array and microtime() the event if the 'latency' option
  *   is set. For those queries master write handle is used.
  * - SQL_QUERY_AUX queries will always use the master write handle because they
- *   are used for transactionstart/end, locking etc. In that respect, query_start() and
- *   query_end() *must not* be used during the connection phase.
+ *   are used for transaction start/end, locking etc. In that respect, query_start()
+ *   and query_end() *must not* be used during the connection phase.
  * - SELECT queries will use the master write handle if:
  *   -- any of the tables involved is a temp table
  *   -- any of the tables involved is listed in the 'exclude_tables' option
